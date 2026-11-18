@@ -51,6 +51,11 @@ struct HomeView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
+        .task {
+            // Cold launch (e.g. from the Control): pick up a pending deep link.
+            router.consumePendingDeepLink()
+            await services.activitySync.syncIfNeeded()
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             refreshToday()

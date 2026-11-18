@@ -21,7 +21,7 @@ final class AppRouter {
     func handle(_ link: DeepLink) {
         switch link {
         case .today:
-            addFoodRequest = nil
+            break // Opening the app is enough; don't interrupt an open sheet.
         case .addFood(let mode):
             presentAddFood(mode)
         }
