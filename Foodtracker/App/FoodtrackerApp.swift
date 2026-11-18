@@ -4,11 +4,13 @@ import SwiftUI
 @main
 struct FoodtrackerApp: App {
     @State private var router = AppRouter()
+    @State private var services = AppServices()
 
     var body: some Scene {
         WindowGroup {
             HomeView()
                 .environment(router)
+                .environment(services)
                 .onOpenURL { url in
                     router.handle(url: url)
                 }

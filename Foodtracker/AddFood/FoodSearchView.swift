@@ -4,12 +4,14 @@ import SwiftUI
 /// Root of the add-food sheet: quick actions, recent/frequent foods and search.
 struct FoodSearchView: View {
     @Environment(AddFoodFlow.self) private var flow
+    @Environment(AppServices.self) private var services
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
     @Query(filter: #Predicate<Food> { $0.isHidden == false }) private var foods: [Food]
 
     @State private var searchText = ""
+    @State private var online = OnlineSearchState()
 
     var body: some View {
         List {
@@ -29,6 +31,12 @@ struct FoodSearchView: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search foods")
         .autocorrectionDisabled()
+        .onSubmit(of: .search) {
+            searchOnline()
+        }
+        .onChange(of: query) { _, newValue in
+            if newValue != online.query { online.task?.cancel() }
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
@@ -106,6 +114,77 @@ struct FoodSearchView: View {
             }
         } header: {
             Text("My Foods")
+        }
+
+        Section {
+            onlineContent
+        } header: {
+            Text("Open Food Facts")
+        }
+    }
+
+    @ViewBuilder
+    private var onlineContent: some View {
+        if online.query != query {
+            Button {
+                searchOnline()
+            } label: {
+                Label("Search online for “\(query)”", systemImage: "magnifyingglass")
+            }
+        } else {
+            switch online.phase {
+            case .idle:
+                EmptyView()
+            case .loading:
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Searching…").foregroundStyle(.secondary)
+                }
+            case .failed(let message):
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button("Try Again") { searchOnline() }
+                }
+            case .loaded(let drafts):
+                if drafts.isEmpty {
+                    Text("No results.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(drafts, id: \.self) { draft in
+                        Button {
+                            let food = FoodCatalog.save(draft, in: context)
+                            flow.push(.portion(food, .manual))
+                        } label: {
+                            OnlineResultRow(draft: draft)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func searchOnline() {
+        let term = query
+        guard !term.isEmpty else { return }
+        online.task?.cancel()
+        online.query = term
+        online.phase = .loading
+        let database = services.foodDatabase
+        online.task = Task {
+            do {
+                let results = try await database.search(term)
+                guard !Task.isCancelled, online.query == term else { return }
+                online.phase = .loaded(results)
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled, online.query == term else { return }
+                if (error as? URLError)?.code == .cancelled { return }
+                online.phase = .failed("Search failed. Check your connection and try again.")
+            }
         }
     }
 
@@ -233,5 +312,47 @@ struct FoodRow: View {
                 .foregroundStyle(.tertiary)
         }
         .contentShape(Rectangle())
+    }
+}
+
+/// State of the explicit Open Food Facts search.
+struct OnlineSearchState {
+    enum Phase {
+        case idle
+        case loading
+        case loaded([FoodDraft])
+        case failed(String)
+    }
+
+    var query = ""
+    var phase: Phase = .idle
+    var task: Task<Void, Never>?
+}
+
+/// A search result from Open Food Facts.
+struct OnlineResultRow: View {
+    let draft: FoodDraft
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(draft.name)
+                    .lineLimit(2)
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "plus.circle")
+                .foregroundStyle(Color.accentColor)
+        }
+        .contentShape(Rectangle())
+    }
+
+    private var subtitle: String {
+        let energy = "\(Format.kcal(draft.kcal ?? 0)) kcal / 100 g"
+        if let brand = draft.brand { return "\(brand) · \(energy)" }
+        return energy
     }
 }
