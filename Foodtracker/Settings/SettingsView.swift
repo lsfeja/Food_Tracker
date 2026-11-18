@@ -150,10 +150,3 @@ struct TargetField: View {
             }
     }
 }
-
-/// Placeholder for activity integrations (Strava), filled in by a later milestone.
-struct ActivitySettingsSection: View {
-    var body: some View {
-        EmptyView()
-    }
-}

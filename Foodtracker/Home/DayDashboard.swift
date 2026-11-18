@@ -6,6 +6,7 @@ struct DayDashboard: View {
     let day: Date
 
     @Environment(AppRouter.self) private var router
+    @Environment(AppServices.self) private var services
     @Environment(\.modelContext) private var context
 
     @Query private var weekEntries: [FoodEntry]
@@ -95,6 +96,9 @@ struct DayDashboard: View {
             }
         }
         .listStyle(.insetGrouped)
+        .refreshable {
+            await services.activitySync.sync()
+        }
         .navigationTitle(title)
         .safeAreaInset(edge: .bottom) {
             AddFoodButton(day: day)

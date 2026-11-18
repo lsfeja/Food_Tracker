@@ -7,6 +7,7 @@ struct HomeView: View {
     }
 
     @Environment(AppRouter.self) private var router
+    @Environment(AppServices.self) private var services
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var today = Calendar.current.startOfDay(for: .now)
@@ -54,6 +55,7 @@ struct HomeView: View {
             guard phase == .active else { return }
             refreshToday()
             router.consumePendingDeepLink()
+            Task { await services.activitySync.syncIfNeeded() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             refreshToday()
