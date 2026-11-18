@@ -1,0 +1,22 @@
+# Secrets — never commit
+Config/Secrets.xcconfig
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.moved-aside
+*.hmap
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# macOS
+.DS_Store
