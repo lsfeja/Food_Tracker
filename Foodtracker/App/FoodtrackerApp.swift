@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 @main
@@ -6,5 +7,6 @@ struct FoodtrackerApp: App {
         WindowGroup {
             Text("Foodtracker")
         }
+        .modelContainer(SharedModelContainer.shared)
     }
 }
