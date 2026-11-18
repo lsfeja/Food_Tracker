@@ -66,7 +66,7 @@ private struct CircularView: View {
         Gauge(value: budget.clampedProgress) {
             Image(systemName: "fork.knife")
         } currentValueLabel: {
-            Text(budget.calories.isOver ? "−\(budget.remainingText)" : budget.remainingText)
+            Text(budget.calories.isOver ? "−" + budget.remainingText : budget.remainingText)
                 .font(.system(.body, design: .rounded).weight(.semibold))
                 .minimumScaleFactor(0.5)
         }

@@ -29,9 +29,13 @@ struct CalorieRing: View {
             .padding(lineWidth * 1.5)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(budget.isOver
+        .accessibilityLabel(Text(accessibilityText))
+    }
+
+    private var accessibilityText: String {
+        budget.isOver
             ? "\(Format.kcal(-budget.remaining)) kilocalories over budget"
-            : "\(Format.kcal(budget.remaining)) kilocalories left")
+            : "\(Format.kcal(budget.remaining)) kilocalories left"
     }
 
     private var trimmedProgress: CGFloat {

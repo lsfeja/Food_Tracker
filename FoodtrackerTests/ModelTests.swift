@@ -38,8 +38,9 @@ struct FoodEntryTests {
         let context = ModelContext(container)
         let food = Food(name: "Skyr", per100g: Nutrients(kcal: 63, protein: 11, carbs: 4, fat: 0.2))
         context.insert(food)
-        let entry = FoodEntry(name: "Skyr", grams: nil, nutrients: .zero, source: .manual, food: food)
+        let entry = FoodEntry(name: "Skyr", grams: nil, nutrients: .zero, source: .manual)
         context.insert(entry)
+        entry.food = food
         entry.updateGrams(200)
         #expect(entry.kcal == 126)
         #expect(entry.protein == 22)

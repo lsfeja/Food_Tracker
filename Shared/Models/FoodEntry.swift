@@ -6,6 +6,8 @@ import SwiftData
 /// Nutrients are stored as **absolute values** (a snapshot at logging time), so editing
 /// or deleting the linked `Food` never changes history. `grams` is optional so that
 /// estimates without a weight (quick add, planned AI estimates) fit the same model.
+///
+/// Set `food` only after inserting the entry into a context (see `FoodLogger`).
 @Model
 final class FoodEntry {
     var id: UUID = UUID()
@@ -31,8 +33,7 @@ final class FoodEntry {
         grams: Double?,
         nutrients: Nutrients,
         source: EntrySource,
-        isEstimated: Bool = false,
-        food: Food? = nil
+        isEstimated: Bool = false
     ) {
         self.timestamp = timestamp
         self.name = name
@@ -43,7 +44,6 @@ final class FoodEntry {
         self.fat = nutrients.fat
         self.sourceRaw = source.rawValue
         self.isEstimated = isEstimated
-        self.food = food
     }
 
     var nutrients: Nutrients {

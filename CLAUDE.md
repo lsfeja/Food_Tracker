@@ -41,6 +41,33 @@ Requirements: Xcode 16 or later, iOS 18.0 deployment target, iPhone only, portra
 Code in `Shared/` must compile in the widget extension. No UIKit-only APIs that are
 unavailable to extensions, and no app-only services.
 
+### Where things live
+
+```
+Foodtracker/
+  App/          FoodtrackerApp (entry), AppRouter, AppServices, FoodtrackerShortcuts
+  Home/         HomeView (root + sheets), DayDashboard (today or any day), ring, bars, rows
+  AddFood/      AddFoodView (sheet + NavigationStack), AddFoodFlow/AddFoodRoute,
+                FoodSearchView, PortionView, FoodEditorView, QuickAddView, FoodDraft
+  Barcode/      BarcodeFlowView (lookup + fallbacks), BarcodeScannerView (DataScanner)
+  Label/        LabelScanView (camera/library → OCR → editor), CameraPicker
+  Entry/        EditEntryView
+  History/      HistoryView (Swift Charts), HistoryStats (pure aggregation)
+  Settings/     SettingsView, ActivitySettingsSection (Strava)
+  Services/     FoodLogger, FoodCatalog, KeychainStore,
+                FoodDatabase/ (Open Food Facts), Label/ (OCR + parser),
+                Activity/ (ActivitySource, ActivitySyncService), Strava/
+Shared/
+  Models/       Food, FoodEntry, ActivityRecord, Nutrients, source enums
+  Persistence/  SharedModelContainer (App Group store), NutritionStore (fetch helpers)
+  Budget/       BudgetCalculator (pure)
+  Settings/     SettingsKey/SettingsDefault, UserSettings
+  Intents/      AddFoodMode (AppEnum), OpenAddFoodIntent, DeepLink + DeepLinkInbox
+  Support/      AppGroup, Format/DecimalParser, WidgetRefresher
+FoodtrackerWidgets/
+  TodayWidget + TodayProvider, AddFoodControl, FoodtrackerWidgetsBundle
+```
+
 ## Configuration & secrets
 
 - `Config/Base.xcconfig` holds the project-level settings: `BUNDLE_ID_PREFIX`,
@@ -69,6 +96,22 @@ MVVM-ish, SwiftUI-first:
   - `ActivitySyncService` syncs every `ActivitySource` into `ActivityRecord`s
 - `AppServices` is the dependency container. It is injected with `.environment(...)`.
 - `AppRouter` owns the global navigation state (the add-food sheet) and handles deep links.
+- The add-food sheet has its own `NavigationStack` driven by `AddFoodFlow.path`. Screens
+  push/replace `AddFoodRoute`s (scanner → portion uses `replaceTop` so Back skips the
+  scanner) and call `flow.finish()` after logging.
+
+### External APIs
+
+- **Open Food Facts**: `GET /api/v2/product/{barcode}` and `/cgi/search.pl` (search is
+  rate limited by OFF, so it only runs on explicit user action). Sends the User-Agent
+  `Foodtracker/1.0 (iOS; private use)`. Decoding is lenient (numbers may be strings).
+- **Strava v3**: OAuth `/oauth/mobile/authorize` → `/oauth/token`. Data comes from
+  `GET /athlete/activities?after=…` (list) plus `GET /activities/{id}` (detail, for
+  `calories`). Detail is fetched once per activity, and activities whose details are
+  complete are reused from the cache. Fallback: kcal ≈ kJ of work (rides with power).
+  `StravaRateLimiter` keeps a margin below 100 requests/15 min and 1,000/day, reads the
+  `X-ReadRateLimit-*` headers, and backs off on 429. Auto-sync runs at most every 10 min.
+  Pull-to-refresh forces a sync, still subject to the limiter.
 
 ### Data model (SwiftData, `Shared/Models`)
 
@@ -113,6 +156,17 @@ directly.
   `source = .ai` and `isEstimated = true`. No schema change is needed.
 - **Garmin**: implement `ActivitySource` (`kind = .garmin`) and register it in
   `AppServices.activitySources`. The sync logic and the budget math stay unchanged.
+
+## Testing
+
+Unit tests use Swift Testing (`import Testing`, `@Test`, `#expect`) in `FoodtrackerTests/`:
+budget math, history aggregation, nutrient scaling, decimal parsing, deep links, the
+label parser (DE/EN fixtures), Open Food Facts decoding, and Strava decoding plus rate
+limiting. Use `testCalendar` and `day(_:_:_:)` from `TestSupport.swift` for
+deterministic dates, and `SharedModelContainer.make(inMemory: true)` for SwiftData.
+
+When changing `NutritionLabelParser`, add a fixture row set to
+`NutritionLabelParserTests` for the label layout that motivated the change.
 
 ## Conventions
 

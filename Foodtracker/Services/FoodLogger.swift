@@ -22,10 +22,10 @@ enum FoodLogger {
             name: food.name,
             grams: grams,
             nutrients: food.nutrients(forGrams: grams),
-            source: source,
-            food: food
+            source: source
         )
         context.insert(entry)
+        entry.food = food
         food.markUsed(grams: grams)
         commit(context)
         return entry

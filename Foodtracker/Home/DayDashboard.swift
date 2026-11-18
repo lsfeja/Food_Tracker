@@ -213,7 +213,7 @@ struct WeeklyBalanceView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(balance.daysRemaining == 1 ? "last day" : "\(balance.daysRemaining) days left")
+                Text(daysLeftText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -239,6 +239,10 @@ struct WeeklyBalanceView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+
+    private var daysLeftText: String {
+        balance.daysRemaining == 1 ? "last day" : "\(balance.daysRemaining) days left"
     }
 }
 

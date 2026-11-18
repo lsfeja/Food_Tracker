@@ -24,6 +24,7 @@ struct CameraPicker: UIViewControllerRepresentable {
 
     func updateUIViewController(_ picker: UIImagePickerController, context: Context) {}
 
+    @MainActor
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let onFinish: (UIImage?) -> Void
 
