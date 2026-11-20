@@ -322,7 +322,7 @@ private struct SetTrackingRow: View {
             }
             .buttonStyle(.borderless)
             .sensoryFeedback(.impact(weight: .light), trigger: exerciseSet.isDone)
-            .accessibilityLabel(exerciseSet.isDone ? "Set \(number) done" : "Complete set \(number)")
+            .accessibilityLabel(Text(String(exerciseSet.isDone ? "Set \(number) done" : "Complete set \(number)")))
         }
     }
 

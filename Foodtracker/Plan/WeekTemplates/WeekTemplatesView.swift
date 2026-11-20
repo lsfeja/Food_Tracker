@@ -77,7 +77,7 @@ struct WeekTemplateRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(template.name.isEmpty ? "Untitled" : template.name)
             HStack(spacing: 6) {
-                Text(sessions.count == 1 ? "1 session" : "\(sessions.count) sessions")
+                Text(String(sessions.count == 1 ? "1 session" : "\(sessions.count) sessions"))
                 ForEach(Array(Set(sessions.map(\.content.sport))).sorted { $0.rawValue < $1.rawValue }, id: \.self) { sport in
                     Image(systemName: sport.systemImage)
                 }
