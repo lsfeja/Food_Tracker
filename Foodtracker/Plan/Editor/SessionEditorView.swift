@@ -51,29 +51,3 @@ struct SessionEditorView: View {
         )
     }
 }
-
-/// Type-specific editors (filled in by the session detail milestone).
-struct WorkoutDetailsEditor: View {
-    @Binding var details: WorkoutDetails
-    let sport: SportType
-
-    var body: some View {
-        Section("Notes") {
-            TextField("Notes", text: notesBinding, axis: .vertical)
-                .lineLimit(3...8)
-        }
-    }
-
-    private var notesBinding: Binding<String> {
-        Binding(
-            get: { details.notes },
-            set: { newValue in
-                switch details {
-                case .strength(var workout): workout.notes = newValue; details = .strength(workout)
-                case .endurance(var workout): workout.notes = newValue; details = .endurance(workout)
-                case .general(var workout): workout.notes = newValue; details = .general(workout)
-                }
-            }
-        )
-    }
-}
