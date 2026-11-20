@@ -69,6 +69,14 @@ struct StatsView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Stats")
+            .navigationDestination(for: StatsRoute.self) { route in
+                switch route {
+                case .exercises:
+                    ExerciseListView()
+                case .exercise(let key):
+                    ExerciseDetailView(key: key)
+                }
+            }
             .toolbar {
                 if period.kind != .all {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -156,14 +164,6 @@ struct StatsView: View {
 }
 
 // Category sections (filled in by the following milestones).
-
-struct StrengthStatsSection: View {
-    let period: StatsPeriod
-    let earliest: Date?
-    var body: some View {
-        EmptyStatsCard(title: "Strength", message: "Coming soon", systemImage: "dumbbell.fill")
-    }
-}
 
 struct PlanStatsSection: View {
     let period: StatsPeriod

@@ -29,8 +29,22 @@ struct SessionDetailView: View {
     }
 
     var body: some View {
+        let records = newRecords
+
         List {
             header
+
+            if !records.isEmpty {
+                Section {
+                    ForEach(records) { record in
+                        PersonalRecordRow(record: record, isNew: true)
+                    }
+                } header: {
+                    Label("New Personal Records", systemImage: "trophy.fill")
+                        .foregroundStyle(Color.accentColor)
+                }
+                .transition(.opacity.combined(with: .scale))
+            }
 
             LinkedActivitySection(session: session)
 
@@ -62,6 +76,8 @@ struct SessionDetailView: View {
             }
         }
         .animation(.snappy, value: restEnd)
+        .animation(.snappy, value: records.count)
+        .sensoryFeedback(.success, trigger: records.count) { old, new in new > old }
         .onChange(of: details) { _, newValue in
             session.details = newValue
             completeIfAllSetsDone(newValue)
@@ -163,6 +179,16 @@ struct SessionDetailView: View {
     }
 
     // MARK: - Logic
+
+    /// Records set by this session (shown once it's done), compared with all
+    /// earlier strength sessions.
+    private var newRecords: [PersonalRecord] {
+        guard session.isDone, session.sport == .strength else { return [] }
+        var current = StrengthSessionSnapshot(session: session)
+        current.workout = details.strengthWorkout
+        let previous = strengthSessions.prefix(300).map(StrengthSessionSnapshot.init(session:))
+        return StrengthStats.newRecords(in: current, previous: Array(previous))
+    }
 
     private var history: [ExerciseHistory.Record] {
         strengthSessions.prefix(200).map {

@@ -65,6 +65,17 @@ enum Format {
             : hours.formatted(.number.precision(.fractionLength(0...1)))
     }
 
+    /// Training volume: "850" (kg) below 10 t, otherwise tonnes ("12.4").
+    static func volume(_ kg: Double) -> String {
+        kg >= 10_000
+            ? (kg / 1000).formatted(.number.precision(.fractionLength(0...1)))
+            : Int(kg.rounded()).formatted()
+    }
+
+    static func volumeUnit(_ kg: Double) -> String {
+        kg >= 10_000 ? "t" : "kg"
+    }
+
     /// Weight in kg without unit: "80", "82.5"
     static func weight(_ kg: Double) -> String {
         kg.formatted(.number.precision(.fractionLength(0...2)))
