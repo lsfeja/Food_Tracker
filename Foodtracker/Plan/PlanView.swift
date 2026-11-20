@@ -9,6 +9,7 @@ struct PlanView: View {
     }
 
     @Environment(AppRouter.self) private var router
+    @Environment(\.modelContext) private var context
 
     @AppStorage("plan.mode") private var modeRaw = Mode.week.rawValue
     @State private var weekOffset = 0
@@ -40,7 +41,11 @@ struct PlanView: View {
             }
         }
         .sheet(item: $addRequest) { request in
-            AddSessionSheet(day: request.day)
+            AddSessionSheet(
+                title: "Add to \(request.day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))",
+                onAddContent: { content in PlanActions.addSession(content, on: request.day, in: context) },
+                onAddTemplate: { template in LibraryActions.schedule(template, on: request.day, in: context) }
+            )
         }
     }
 

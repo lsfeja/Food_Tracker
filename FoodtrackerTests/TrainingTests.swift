@@ -273,3 +273,55 @@ struct ExerciseHistoryTests {
         #expect(ExerciseHistory.knownNames(in: records) == ["Bench Press", "Dips"])
     }
 }
+
+@MainActor
+struct WeekTemplateActionTests {
+    @Test func savesAndAppliesWeekTemplates() throws {
+        let container = try SharedModelContainer.make(inMemory: true)
+        let context = container.mainContext
+        let calendar = BudgetCalculator.weekCalendar
+        let weekStart = WeekPlanner.weekStart(for: .now, calendar: calendar)
+        let wednesday = calendar.date(byAdding: .day, value: 2, to: weekStart)!
+
+        let done = PlanActions.addSession(WorkoutContent(sport: .run, title: "Done run"), on: weekStart, in: context)
+        done.setDone(true)
+        PlanActions.addSession(WorkoutContent(sport: .strength, title: "Push"), on: wednesday, in: context)
+
+        let template = WeekTemplateActions.saveWeek(startingAt: weekStart, name: "Base", in: context)
+        #expect(template.sessions.map(\.weekday) == [0, 2])
+
+        let nextWeek = WeekPlanner.weekStart(for: .now, offset: 1, calendar: calendar)
+        WeekTemplateActions.apply(template, toWeekStarting: nextWeek, mode: .add, in: context)
+        #expect(WeekTemplateActions.weekSessions(nextWeek, in: context).count == 2)
+
+        // Replace in the current week keeps the completed run, swaps the rest.
+        WeekTemplateActions.apply(template, toWeekStarting: weekStart, mode: .replace, in: context)
+        let current = WeekTemplateActions.weekSessions(weekStart, in: context)
+        #expect(current.count == 3)
+        #expect(current.filter(\.isDone).map(\.title) == ["Done run"])
+        let mondayOrders = current.filter { calendar.isDate($0.date, inSameDayAs: weekStart) }.map(\.order).sorted()
+        #expect(mondayOrders == [0, 1])
+    }
+
+    @Test func movesSessionsBetweenDays() throws {
+        let container = try SharedModelContainer.make(inMemory: true)
+        let context = container.mainContext
+        let calendar = BudgetCalculator.weekCalendar
+        let monday = WeekPlanner.weekStart(for: .now, calendar: calendar)
+        let tuesday = calendar.date(byAdding: .day, value: 1, to: monday)!
+
+        let first = PlanActions.addSession(WorkoutContent(sport: .run, title: "A"), on: monday, in: context)
+        let second = PlanActions.addSession(WorkoutContent(sport: .run, title: "B"), on: monday, in: context)
+        let other = PlanActions.addSession(WorkoutContent(sport: .yoga, title: "C"), on: tuesday, in: context)
+
+        PlanActions.move(first, to: tuesday, before: other, in: context)
+        #expect(calendar.isDate(first.date, inSameDayAs: tuesday))
+        #expect(first.order == 0)
+        #expect(other.order == 1)
+        #expect(second.order == 0)
+
+        let copy = PlanActions.duplicate(other, in: context)
+        #expect(copy.order == 2)
+        #expect(copy.title == "C")
+    }
+}

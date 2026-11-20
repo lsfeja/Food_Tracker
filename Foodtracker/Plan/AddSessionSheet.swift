@@ -1,19 +1,29 @@
 import SwiftData
 import SwiftUI
 
-/// Add a session to a day: from the workout library (copy on use) or a new one.
+/// Add a session: from the workout library (copy on use) or a new one.
+/// Used for calendar days and for days in week templates.
 struct AddSessionSheet: View {
-    let day: Date
+    let title: String
+    /// A new session was created in the editor.
+    var onAddContent: (WorkoutContent) -> Void
+    /// A library workout was picked.
+    var onAddTemplate: (WorkoutTemplate) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var context
     @Query private var templates: [WorkoutTemplate]
 
     @State private var path: [WorkoutContent] = []
     @State private var searchText = ""
 
-    init(day: Date) {
-        self.day = day
+    init(
+        title: String,
+        onAddContent: @escaping (WorkoutContent) -> Void,
+        onAddTemplate: @escaping (WorkoutTemplate) -> Void
+    ) {
+        self.title = title
+        self.onAddContent = onAddContent
+        self.onAddTemplate = onAddTemplate
         _templates = Query(sort: [
             SortDescriptor(\WorkoutTemplate.useCount, order: .reverse),
             SortDescriptor(\WorkoutTemplate.name),
@@ -40,7 +50,7 @@ struct AddSessionSheet: View {
                     }
                     ForEach(filtered) { template in
                         Button {
-                            LibraryActions.schedule(template, on: day, in: context)
+                            onAddTemplate(template)
                             dismiss()
                         } label: {
                             HStack {
@@ -65,15 +75,11 @@ struct AddSessionSheet: View {
             }
             .navigationDestination(for: WorkoutContent.self) { content in
                 SessionEditorView(content: content, navigationTitle: "New Session", saveTitle: "Add") { saved in
-                    PlanActions.addSession(saved, on: day, in: context)
+                    onAddContent(saved)
                     dismiss()
                 }
             }
         }
-    }
-
-    private var title: String {
-        "Add to \(day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
     }
 
     private var emptyLibraryText: String {

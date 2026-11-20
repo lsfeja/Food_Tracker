@@ -15,6 +15,13 @@ enum WeekPlanner {
         return (weekday + 5) % 7
     }
 
+    /// Localized weekday name for index 0 (Monday) … 6 (Sunday).
+    static func weekdayName(_ index: Int, calendar: Calendar, short: Bool = false) -> String {
+        let symbols = short ? calendar.shortWeekdaySymbols : calendar.weekdaySymbols // Sunday first
+        guard symbols.count == 7 else { return "\(index + 1)" }
+        return symbols[(index + 1) % 7]
+    }
+
     /// The seven days (start of day) of the week starting at `weekStart`.
     static func days(ofWeekStarting weekStart: Date, calendar: Calendar) -> [Date] {
         let start = calendar.startOfDay(for: weekStart)
