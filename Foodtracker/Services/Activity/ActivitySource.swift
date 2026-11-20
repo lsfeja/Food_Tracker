@@ -8,6 +8,8 @@ struct ImportedActivity: Equatable, Sendable {
     var startDate: Date
     var durationSeconds: Double
     var distanceMeters: Double = 0
+    var elevationMeters: Double = 0
+    var isIndoor = false
     /// Raw active calories reported (or estimated) by the provider.
     var activeCalories: Double
     var caloriesEstimated: Bool
@@ -36,4 +38,16 @@ protocol ActivitySource: AnyObject {
     /// - Parameter cached: Previously imported activities keyed by `externalID`, so the
     ///   source can skip expensive detail requests for activities it already knows.
     func fetchActivities(since: Date, cached: [String: ImportedActivity]) async throws -> ActivityFetchResult
+}
+
+/// A source that can page through its complete activity history (for the one-time
+/// backfill that feeds the Stats tab).
+@MainActor
+protocol ActivityHistorySource: ActivitySource {
+    /// One page of activities that started before `before`, as summaries
+    /// (no per-activity detail requests). Calories may be estimates.
+    func fetchHistory(before: Date, page: Int, perPage: Int) async throws -> [ImportedActivity]
+
+    /// Approximate total number of activities, for progress display.
+    func estimatedActivityCount() async -> Int?
 }

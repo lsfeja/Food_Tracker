@@ -51,7 +51,7 @@ final class ActivitySyncService {
         defer { isSyncing = false }
 
         let context = container.mainContext
-        let since = Self.syncStartDate()
+        let since = Self.fetchStartDate(lastSync: lastSync)
         var changed = false
         var errorMessage: String?
 
@@ -107,6 +107,16 @@ final class ActivitySyncService {
     }
 
     // MARK: - Helpers
+
+    /// Start of the fetch window: the regular window, extended back to shortly before
+    /// the last successful sync (max. 60 days) so nothing is missed after a long break.
+    static func fetchStartDate(lastSync: Date?, now: Date = .now) -> Date {
+        let standard = syncStartDate(now: now)
+        guard let lastSync else { return standard }
+        let catchUp = lastSync.addingTimeInterval(-2 * 86_400)
+        let floor = now.addingTimeInterval(-60 * 86_400)
+        return max(min(standard, catchUp), floor)
+    }
 
     static func syncStartDate(now: Date = .now) -> Date {
         let calendar = BudgetCalculator.weekCalendar
@@ -175,6 +185,8 @@ extension ImportedActivity {
             startDate: record.startDate,
             durationSeconds: record.durationSeconds,
             distanceMeters: record.distanceMeters,
+            elevationMeters: record.elevationMeters,
+            isIndoor: record.isIndoor,
             activeCalories: record.activeCalories,
             caloriesEstimated: record.caloriesEstimated,
             detailsComplete: record.detailsComplete
@@ -192,6 +204,8 @@ extension ActivityRecord {
             startDate: activity.startDate,
             durationSeconds: activity.durationSeconds,
             distanceMeters: activity.distanceMeters,
+            elevationMeters: activity.elevationMeters,
+            isIndoor: activity.isIndoor,
             activeCalories: activity.activeCalories,
             caloriesEstimated: activity.caloriesEstimated,
             detailsComplete: activity.detailsComplete
@@ -204,6 +218,8 @@ extension ActivityRecord {
         startDate = activity.startDate
         durationSeconds = activity.durationSeconds
         distanceMeters = activity.distanceMeters
+        elevationMeters = activity.elevationMeters
+        isIndoor = activity.isIndoor
         activeCalories = activity.activeCalories
         caloriesEstimated = activity.caloriesEstimated
         detailsComplete = activity.detailsComplete

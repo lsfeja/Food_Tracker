@@ -119,11 +119,25 @@ actor StravaAPIClient {
 
     /// Activities that started after `after` (one page).
     func activities(after: Date, page: Int, perPage: Int) async throws -> [StravaSummaryActivity] {
-        try await get("athlete/activities", query: [
-            URLQueryItem(name: "after", value: String(Int(after.timeIntervalSince1970))),
+        try await activities(before: nil, after: after, page: page, perPage: perPage)
+    }
+
+    /// One page of activities in a time window (`per_page` max. 200).
+    func activities(before: Date?, after: Date?, page: Int, perPage: Int) async throws -> [StravaSummaryActivity] {
+        var query = [
             URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "per_page", value: String(perPage)),
-        ])
+            URLQueryItem(name: "per_page", value: String(min(perPage, 200))),
+        ]
+        if let before { query.append(URLQueryItem(name: "before", value: String(Int(before.timeIntervalSince1970)))) }
+        if let after { query.append(URLQueryItem(name: "after", value: String(Int(after.timeIntervalSince1970)))) }
+        return try await get("athlete/activities", query: query)
+    }
+
+    /// Lifetime activity counts (ride + run + swim; other sports aren't reported).
+    func athleteActivityCount() async throws -> Int? {
+        guard let athleteID = storedTokens()?.athleteID else { return nil }
+        let stats: StravaAthleteStats = try await get("athletes/\(athleteID)/stats", query: [])
+        return stats.totalCount
     }
 
     /// Detailed activity (includes `calories`).

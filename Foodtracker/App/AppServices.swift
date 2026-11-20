@@ -10,6 +10,8 @@ final class AppServices {
     let ocr: OCRService
     let strava: StravaService
     let activitySync: ActivitySyncService
+    /// One-time Strava history import for the Stats tab.
+    let backfill: ActivityBackfillService
 
     init(
         foodDatabase: any FoodDatabaseService = OpenFoodFactsService(),
@@ -22,5 +24,6 @@ final class AppServices {
         self.strava = strava
         // Register further activity sources (e.g. Garmin) here.
         self.activitySync = ActivitySyncService(sources: [strava], container: container)
+        self.backfill = ActivityBackfillService(source: strava, container: container)
     }
 }

@@ -28,11 +28,15 @@ struct RootView: View {
             // Cold launch (e.g. from the Control or a widget): pick up a pending deep link.
             router.consumePendingDeepLink()
             await services.activitySync.syncIfNeeded()
+            services.backfill.resumeIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             router.consumePendingDeepLink()
-            Task { await services.activitySync.syncIfNeeded() }
+            Task {
+                await services.activitySync.syncIfNeeded()
+                services.backfill.resumeIfNeeded()
+            }
         }
     }
 }

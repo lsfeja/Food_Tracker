@@ -72,7 +72,12 @@ struct StravaTokens: Codable, Equatable, Sendable {
     }
 }
 
-enum StravaError: LocalizedError, Equatable {
+/// Errors that tell callers when to retry (e.g. rate limits).
+protocol RetryAfterError: Error {
+    var retryDate: Date? { get }
+}
+
+enum StravaError: LocalizedError, Equatable, RetryAfterError {
     case notConfigured
     case notConnected
     case missingScope
@@ -95,6 +100,13 @@ enum StravaError: LocalizedError, Equatable {
         case .http(let status):
             "Strava returned an error (HTTP \(status))."
         }
+    }
+}
+
+extension StravaError {
+    var retryDate: Date? {
+        if case .rateLimited(let until) = self { return until }
+        return nil
     }
 }
 
@@ -123,8 +135,26 @@ struct StravaSummaryActivity: Decodable, Sendable {
     let movingTime: Double?
     /// Meters.
     let distance: Double?
+    /// Meters.
+    let totalElevationGain: Double?
+    /// Indoor trainer activity.
+    let trainer: Bool?
     /// Only for rides with power data.
     let kilojoules: Double?
+}
+
+struct StravaAthleteStats: Decodable, Sendable {
+    struct Totals: Decodable, Sendable {
+        let count: Int?
+    }
+
+    let allRideTotals: Totals?
+    let allRunTotals: Totals?
+    let allSwimTotals: Totals?
+
+    var totalCount: Int {
+        [allRideTotals, allRunTotals, allSwimTotals].compactMap { $0?.count }.reduce(0, +)
+    }
 }
 
 struct StravaDetailedActivity: Decodable, Sendable {
@@ -153,6 +183,8 @@ extension StravaSummaryActivity {
             startDate: startDate,
             durationSeconds: movingTime ?? elapsedTime ?? 0,
             distanceMeters: distance ?? 0,
+            elevationMeters: totalElevationGain ?? 0,
+            isIndoor: (trainer ?? false) || (sportType ?? type) == "VirtualRide" || (sportType ?? type) == "VirtualRun",
             activeCalories: resolved.kcal,
             caloriesEstimated: resolved.estimated,
             detailsComplete: detailsComplete

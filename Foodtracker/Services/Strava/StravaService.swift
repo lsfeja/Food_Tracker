@@ -122,3 +122,19 @@ final class StravaService: ActivitySource {
         return ActivityFetchResult(activities: activities, isComplete: listComplete)
     }
 }
+
+// MARK: - ActivityHistorySource
+
+extension StravaService: ActivityHistorySource {
+    func fetchHistory(before: Date, page: Int, perPage: Int) async throws -> [ImportedActivity] {
+        guard let client else { throw StravaError.notConfigured }
+        let summaries = try await client.activities(before: before, after: nil, page: page, perPage: perPage)
+        // Summaries only: calories are estimated from kJ where available.
+        return summaries.map { $0.imported(calories: nil, detailsComplete: true) }
+    }
+
+    func estimatedActivityCount() async -> Int? {
+        guard let client else { return nil }
+        return try? await client.athleteActivityCount()
+    }
+}
