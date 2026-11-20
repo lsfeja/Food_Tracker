@@ -34,9 +34,7 @@ struct AddSessionSheet: View {
 
                 Section {
                     if filtered.isEmpty {
-                        Text(templates.isEmpty
-                             ? "Saved workouts appear here. Use “Save to Library” on a session or create them in the library."
-                             : "No workout matches “\(searchText)”.")
+                        Text(emptyLibraryText)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -76,6 +74,12 @@ struct AddSessionSheet: View {
 
     private var title: String {
         "Add to \(day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
+    }
+
+    private var emptyLibraryText: String {
+        templates.isEmpty
+            ? "Saved workouts appear here. Use “Save to Library” on a session or create them in the library."
+            : "No workout matches “\(searchText)”."
     }
 
     private var filtered: [WorkoutTemplate] {
