@@ -6,6 +6,7 @@ struct FoodtrackerWidgetsBundle: WidgetBundle {
     var body: some Widget {
         TodayWidget()
         TrainingWidget()
+        StatsWidget()
         AddFoodControl()
     }
 }

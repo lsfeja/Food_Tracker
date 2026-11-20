@@ -1,7 +1,7 @@
 # Foodtracker
 
 A minimalist all-in-one sports app for iPhone (SwiftUI, SwiftData, iOS 18+): nutrition
-tracking and a training plan. It is built for private use. Logging a meal or ticking off
+tracking, a training plan and statistics. It is built for private use. Logging a meal or ticking off
 a workout should take seconds.
 
 ## Nutrition tab
@@ -43,6 +43,24 @@ a workout should take seconds.
   appear in the day list. You can link and unlink manually.
 - **Widgets**: today's training on the Lock Screen (rectangular) and Home Screen
   (small). Tapping one opens the session.
+
+## Stats tab
+
+- **Period**: week, month, year or all time, plus a year picker.
+- **Endurance** (per sport or cycling combined): distance, time, elevation and activity
+  counts; weekly and monthly volume; this year vs. last year (cumulative); longest
+  activity, most elevation, best week and month; indoor vs. outdoor share; optional
+  yearly goals with "on track / behind".
+- **Strength**: max weight, best set, estimated 1RM (Epley) and volume per exercise;
+  personal records (new ones are highlighted when a workout is finished); progress
+  charts and full history per exercise; weekly volume and session counts.
+- **Plan**: planned vs. completed sessions, and training time per sport.
+- **Nutrition**: daily averages vs. targets, days within or over budget, and eaten vs.
+  active calories.
+- **History import**: Settings › Activity History imports your full Strava history
+  once. It respects rate limits and resumes automatically.
+- **Widget**: a Home Screen "Year to Date" widget (small/medium) for a chosen sport,
+  with goal progress.
 
 ## Setup
 

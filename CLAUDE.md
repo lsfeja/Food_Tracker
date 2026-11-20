@@ -1,8 +1,9 @@
 # Foodtracker — notes for Claude
 
-An all-in-one sports app for iPhone (SwiftUI, SwiftData, iOS 18+). It has two tabs:
-**Nutrition** (calorie and macro tracking) and **Plan** (training calendar with a
-workout library, week templates and Strava matching). Private app, not for the App
+An all-in-one sports app for iPhone (SwiftUI, SwiftData, iOS 18+). It has three tabs:
+**Nutrition** (calorie and macro tracking), **Plan** (training calendar with a workout
+library, week templates and Strava matching) and **Stats** (endurance, strength, plan
+and nutrition statistics). Private app, not for the App
 Store. Main goal: **logging a meal or ticking off a workout takes seconds**.
 
 The display name is still "Foodtracker" (`INFOPLIST_KEY_CFBundleDisplayName`). It can
@@ -38,7 +39,7 @@ Requirements: Xcode 16 or later, iOS 18.0 deployment target, iPhone only, portra
 | Folder               | Target(s)                          | Contents |
 |----------------------|------------------------------------|----------|
 | `Foodtracker/`       | app                                | App entry, views, view models, services |
-| `Shared/`            | app **and** widget extension       | SwiftData models (nutrition + training), settings, budget math, training logic, App Intents, deep links |
+| `Shared/`            | app **and** widget extension       | SwiftData models (nutrition, training, goals), settings, budget math, training and stats logic, App Intents, deep links |
 | `FoodtrackerWidgets/`| widget extension                   | Lock Screen/Home Screen widgets, Control widget |
 | `FoodtrackerTests/`  | unit tests (hosted in app)         | Swift Testing tests, `@testable import Foodtracker` |
 | `Config/`            | (not a synchronized folder)        | xcconfigs, Info.plists, entitlements |
@@ -67,10 +68,15 @@ Foodtracker/
     Editor/     SessionEditorView, WorkoutDetailsEditor (strength/endurance/general)
     Library/    WorkoutLibraryView, NewWorkoutSheet
     WeekTemplates/ WeekTemplatesView + editor, LoadWeekTemplateView, SaveWeekTemplateView
+  Stats/        StatsView (Stats tab root: period, year, category, StatsRoute destinations),
+                StatsComponents (StatsCard, MetricTile, MetricGrid, ChipPicker),
+                Endurance/Strength/Plan/NutritionStatsSection, ExerciseListView,
+                ExerciseDetailView, GoalEditor
   Components/   NumberField, OptionalNumberField, IntensityPicker, ProgressBar
   Services/     FoodLogger, FoodCatalog, KeychainStore,
                 FoodDatabase/ (Open Food Facts), Label/ (OCR + parser),
-                Activity/ (ActivitySource, ActivitySyncService), Strava/,
+                Activity/ (ActivitySource + ActivityHistorySource, ActivitySyncService,
+                ActivityBackfillService), Strava/,
                 Training/ (PlanActions, LibraryActions, WeekTemplateActions, TrainingLinker)
 Shared/
   Models/       Food, FoodEntry, ActivityRecord, Nutrients, source enums
@@ -80,11 +86,14 @@ Shared/
   Training/     SportType, WorkoutDetails (Codable payload) + WorkoutContent,
                 TrainingModels (PlannedSession, WorkoutTemplate, WeekTemplate), TrainingStore,
                 ActivityMatcher, WeekPlanner, ExerciseHistory (all pure logic except models)
+  Stats/        StatsPeriod (+ StatsBuckets), StatsSport + ActivitySnapshot, EnduranceStats
+                (+ StatsSportFilter, GoalProgress), StrengthStats, PlanStats, NutritionStats
+                (pure), YearlyGoal (model)
   Intents/      AddFoodMode (AppEnum), OpenAddFoodIntent, DeepLink + DeepLinkInbox
   Support/      AppGroup, Format/DecimalParser, WidgetRefresher
 FoodtrackerWidgets/
-  TodayWidget + TodayProvider, TrainingWidget (+ provider), AddFoodControl,
-  FoodtrackerWidgetsBundle
+  TodayWidget + TodayProvider, TrainingWidget (+ provider), StatsWidget (configurable,
+  AppIntentConfiguration), AddFoodControl, FoodtrackerWidgetsBundle
 ```
 
 ## Configuration & secrets
@@ -114,8 +123,8 @@ MVVM-ish, SwiftUI-first:
   - `StravaService` (OAuth via `ASWebAuthenticationSession`, token refresh, rate limiting)
   - `ActivitySyncService` syncs every `ActivitySource` into `ActivityRecord`s
 - `AppServices` is the dependency container. It is injected with `.environment(...)`.
-- `RootView` hosts the `TabView` (`AppTab`: `.nutrition`, `.plan`; add cases for new
-  areas). App-wide concerns live there: the add-food sheet, deep links, and the Strava
+- `RootView` hosts the `TabView` (`AppTab`: `.nutrition`, `.plan`, `.stats`; add cases
+  for new areas). App-wide concerns live there: the add-food sheet, deep links, and the Strava
   sync on launch/foreground. Each tab owns its `NavigationStack`.
 - `AppRouter` owns the global navigation state: the selected tab, the add-food sheet, and
   the Plan stack's `planPath` (a `NavigationPath`, so pushed screens can push their own
@@ -147,8 +156,11 @@ MVVM-ish, SwiftUI-first:
   (manual / barcode / label / ai), an `isEstimated` flag, and an optional link to its
   `Food`. AI estimates (planned) become entries with `source = .ai`,
   `isEstimated = true`, and no food.
-- `ActivityRecord`: an imported activity, keyed by `(source, externalID)`, with
-  `activeCalories`.
+- `ActivityRecord`: an imported activity, keyed by `(source, externalID)`. It holds
+  `activeCalories`, distance, moving time, `elevationMeters` and `isIndoor` (trainer or
+  virtual).
+- `YearlyGoal`: an optional distance and/or hours target per year and
+  `StatsSportFilter` (e.g. 8,000 km cycling).
 
 - `PlannedSession`: one session on a day (`date` = start of day, `order` within the day).
   It holds `sport`, `title`, `status` (planned/done/skipped) and `detailsData`. It can
@@ -208,9 +220,50 @@ properties need default values so lightweight migration keeps working.
   (weekly limit + counted active kcal of earlier days − kcal eaten on earlier days) ÷ days
   left, including today. The weekly balance = limit + active − eaten so far.
 
+### Stats
+
+- **Data sources**: endurance stats use `ActivityRecord`s (Strava). Strength stats use
+  strength `PlannedSession`s, counting only ticked-off sets; actual reps/weight fall back
+  to the plan. Plan stats use sessions plus activities. Nutrition stats use
+  `FoodEntry`s plus activities (`BudgetCalculator.totalsByDay`).
+- **Computed on the fly, no cached aggregates**. Each section converts its `@Query`
+  results into Sendable snapshots (`ActivitySnapshot`, `StrengthSessionSnapshot`,
+  `PlanSessionSnapshot`) and runs the pure `*Stats.report(...)` in a detached task. The
+  task is keyed on period + a data signature. If it ever becomes slow with huge
+  histories, add a persisted aggregate then, not before.
+- **Periods** (`StatsPeriod`): week and month are the ones containing the reference date
+  (today for the current year, otherwise 31 Dec of the selected year). Year is the
+  calendar year; all time runs from the earliest data. `buckets` defines the chart
+  granularity per period.
+- **Endurance**: `StatsSport` buckets activities (ride, run, swim, indoor ride, other;
+  indoor = `VirtualRide` or trainer). `StatsSportFilter` adds "all" and "cycling" (ride +
+  indoor) for filters and goals. Goal status compares actual progress with an even pace
+  through the year (`EnduranceStats.goalProgress`).
+- **Strength**: Epley 1RM (`w × (1 + reps/30)`, a single rep is the weight itself), volume
+  = reps × weight, exercises matched by normalized name. `StrengthStats.newRecords`
+  compares a session with all earlier ones. A first-ever exercise isn't a record. The
+  session detail shows new records once a strength session is done.
+- **Plan**: adherence counts workouts up to today (rest days excluded). Training time
+  uses the linked activity's moving time, otherwise the planned duration of a completed
+  session, plus unplanned activities. Strength sessions without a linked activity have
+  no duration.
+- **History backfill** (`ActivityBackfillService`, one per `ActivityHistorySource`): a
+  one-time, page-based import (200 per page, summaries only, no per-activity detail
+  calls) of everything before the regular sync window. State is persisted in
+  `UserDefaults` after every page. A rate limit (`RetryAfterError`) pauses the import,
+  which resumes automatically or on the next launch. It never overwrites exact calories
+  of known activities. Old activities get kJ-based calorie estimates (or 0).
+- **Regular sync catch-up**: the sync window extends back to shortly before the last
+  successful sync (max. 60 days), so nothing falls between the backfill and the 14-day
+  window.
+
 ### Widgets & intents
 
 - `TodayWidget`: accessoryCircular / accessoryRectangular / accessoryInline / systemSmall.
+- `StatsWidget`: systemSmall / systemMedium. Shows year-to-date distance for a configured
+  `StatsSportFilter` (`AppEnum` conformance lives in the widget target), progress toward
+  the `YearlyGoal`, the delta vs. last year, and monthly bars (medium). Tapping it
+  opens `foodtracker://stats`.
 - `TrainingWidget`: accessoryRectangular / systemSmall with today's sessions. Tapping it
   opens `foodtracker://session?id=…` for the next open session (or `foodtracker://plan`).
 - `AddFoodControl` (ControlWidget, iOS 18): opens the app into add food, barcode scan or
@@ -219,7 +272,7 @@ properties need default values so lightweight migration keeps working.
   posts a `DeepLink` through `DeepLinkInbox` (App Group defaults + notification), and
   `AppRouter` consumes it.
 - URL scheme `foodtracker://` handles deep links (`foodtracker://add?mode=barcode`,
-  `foodtracker://plan`, `foodtracker://session?id=<UUID>`). Strava's
+  `foodtracker://plan`, `foodtracker://session?id=<UUID>`, `foodtracker://stats`). Strava's
   OAuth callback `foodtracker://foodtracker` is captured by `ASWebAuthenticationSession`.
 - After every data change, call `WidgetRefresher.reload()`. `FoodLogger`, `PlanActions`
   and `ActivitySyncService` already do this.
@@ -229,7 +282,9 @@ properties need default values so lightweight migration keeps working.
 - **AI estimation**: add an `AIEstimationService`. It creates `FoodEntry`s with
   `source = .ai` and `isEstimated = true`. No schema change is needed.
 - **Garmin**: implement `ActivitySource` (`kind = .garmin`) and add it to the `sources`
-  array passed to `ActivitySyncService` in `AppServices.init`. The sync logic, budget
+  array passed to `ActivitySyncService` in `AppServices.init`. Also implement
+  `ActivityHistorySource` and create an `ActivityBackfillService` for it to import its
+  history. The sync logic, budget
   math and session matching stay unchanged (map Garmin sport names in
   `SportType.fromActivityType` or a Garmin-specific mapper).
 
@@ -240,7 +295,10 @@ budget math, history aggregation, nutrient scaling, decimal parsing, deep links,
 label parser (DE/EN fixtures), Open Food Facts decoding, and Strava decoding plus rate
 limiting. Training tests (`TrainingTests.swift`) cover payload coding and summaries,
 the training models, `ActivityMatcher`, `WeekPlanner`, `ExerciseHistory`, applying and
-saving week templates, moving sessions, and `TrainingLinker`. Use `testCalendar` and `day(_:_:_:)` from `TestSupport.swift` for
+saving week templates, moving sessions, and `TrainingLinker`. Stats tests cover
+`StatsPeriod`, the backfill (with a fake `ActivityHistorySource`: paging, pause/resume,
+upsert), `EnduranceStats` (totals, buckets, records, indoor share, YoY, goals),
+`StrengthStats` (1RM, records, new-record detection) and `PlanStats`/`NutritionStats`. Use `testCalendar` and `day(_:_:_:)` from `TestSupport.swift` for
 deterministic dates, and `SharedModelContainer.make(inMemory: true)` for SwiftData.
 
 When changing `NutritionLabelParser`, add a fixture row set to
@@ -255,8 +313,10 @@ When changing `NutritionLabelParser`, add a fixture row set to
 - Metric units only: grams and kcal. Format numbers with the helpers in `Formatting.swift`.
 - Parse user-entered decimals with `DecimalParser` (accepts `,` and `.`).
 - Keep views small. Speed of logging beats feature count. Avoid extra taps.
-- Both tabs share the same visual language: inset-grouped lists, the green accent for
-  progress and done states, SF Symbols per sport (`SportType.systemImage`).
+- All tabs share the same visual language: inset-grouped lists or `StatsCard`s on the
+  grouped background, the green accent for progress and done states, orange only for
+  "over budget"/"behind", and SF Symbols per sport. Charts use Swift Charts. Series per
+  sport use `SportPalette` (green/blue family).
 - Swipe actions on rows are delete/duplicate. Week navigation in Plan swipes on the
   week strip, not the list, so the two horizontal gestures don't conflict.
 - Use the `@MainActor` view-model pattern. Network code is `async`/`await`.
