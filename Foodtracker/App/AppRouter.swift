@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// Tabs of the root `TabView`. Add new cases for future areas (e.g. analytics).
 enum AppTab: Hashable {
@@ -28,7 +29,8 @@ final class AppRouter {
 
     var selectedTab: AppTab = .nutrition
     var addFoodRequest: AddFoodRequest?
-    var planPath: [PlanRoute] = []
+    /// Heterogeneous so pushed screens can push their own value types.
+    var planPath = NavigationPath()
 
     func presentAddFood(_ mode: AddFoodMode = .search, day: Date = .now) {
         addFoodRequest = AddFoodRequest(mode: mode, day: day)
@@ -36,7 +38,7 @@ final class AppRouter {
 
     func showSession(_ id: UUID) {
         selectedTab = .plan
-        planPath = [.session(id)]
+        planPath = NavigationPath([PlanRoute.session(id)])
     }
 
     func handle(_ link: DeepLink) {

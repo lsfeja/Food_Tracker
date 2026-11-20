@@ -136,7 +136,7 @@ private struct PlanMenu: View {
     var body: some View {
         Menu {
             Button {
-                router.planPath.append(.library)
+                router.planPath.append(PlanRoute.library)
             } label: {
                 Label("Workout Library", systemImage: "books.vertical")
             }
@@ -152,7 +152,7 @@ private struct PlanMenu: View {
                     Label("Save Week as Template…", systemImage: "square.and.arrow.up")
                 }
                 Button {
-                    router.planPath.append(.weekTemplates)
+                    router.planPath.append(PlanRoute.weekTemplates)
                 } label: {
                     Label("Manage Templates", systemImage: "rectangle.stack")
                 }

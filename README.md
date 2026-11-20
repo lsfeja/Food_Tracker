@@ -1,9 +1,10 @@
 # Foodtracker
 
-A minimalist, fast calorie and macro tracker for iPhone (SwiftUI, SwiftData, iOS 18+).
-It is built for private use. Logging a meal should take seconds.
+A minimalist all-in-one sports app for iPhone (SwiftUI, SwiftData, iOS 18+): nutrition
+tracking and a training plan. It is built for private use. Logging a meal or ticking off
+a workout should take seconds.
 
-## Features
+## Nutrition tab
 
 - **Home**: a ring with the calories you have left (target + Strava active kcal − eaten),
   protein and carb bars (fat smaller), today's entries (swipe to edit or delete), and a
@@ -21,6 +22,27 @@ It is built for private use. Logging a meal should take seconds.
   active calories (toggle, 50–100 %).
 - **Widgets**: Lock Screen circular, rectangular and inline widgets, a Home Screen small
   widget, and a **Log Food** control for the Lock Screen and Control Center.
+
+## Plan tab
+
+- **Training calendar**: the week as a to-do list grouped by day, with today highlighted.
+  Swipe the week strip to change weeks, and switch between day and week view.
+- **Sessions**: tick them off, add with + per day, drag & drop between days, swipe to
+  delete or duplicate.
+- **Session details by sport**:
+  - Strength: sets × reps × weight, rest timer, tick off sets with actual values, and
+    your values from last time.
+  - Endurance: duration, distance, zones/RPE and intervals.
+  - Mobility, yoga, rest days and custom sessions: notes and duration.
+- **Workout library**: reusable workouts, copied when used, so editing one never changes
+  past sessions.
+- **Week templates**: build them, save a week as one, and load one into any week with a
+  preview (add or replace).
+- **Strava**: imported activities are matched to planned sessions on the same day by
+  sport and marked done, with actual duration and distance shown. Unplanned activities
+  appear in the day list. You can link and unlink manually.
+- **Widgets**: today's training on the Lock Screen (rectangular) and Home Screen
+  (small). Tapping one opens the session.
 
 ## Setup
 
