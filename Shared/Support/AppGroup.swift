@@ -10,7 +10,7 @@ enum AppGroup {
         if let value, !value.isEmpty, !value.contains("$(") {
             return value
         }
-        return "group.com.example.foodtracker"
+        return "group.com.lucasfeja.foodtracker"
     }()
 
     /// Container directory of the App Group, or `nil` if the entitlement is missing

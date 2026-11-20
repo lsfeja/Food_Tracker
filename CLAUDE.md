@@ -7,7 +7,9 @@ and nutrition statistics). Private app, not for the App
 Store. Main goal: **logging a meal or ticking off a workout takes seconds**.
 
 The display name is still "Foodtracker" (`INFOPLIST_KEY_CFBundleDisplayName`). It can
-be renamed later. Never change the bundle IDs (`BUNDLE_ID_PREFIX` + `.foodtracker`).
+be renamed later. Never change the bundle IDs on your own: `BUNDLE_ID_PREFIX` is `com.lucasfeja`, so the
+app is `com.lucasfeja.foodtracker`, the widget extension `com.lucasfeja.foodtracker.widgets` and
+the App Group `group.com.lucasfeja.foodtracker`.
 
 ## Build & run
 

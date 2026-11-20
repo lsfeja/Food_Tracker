@@ -66,9 +66,9 @@ a workout should take seconds.
 
 1. **Secrets**: run `cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig`, then
    set `STRAVA_CLIENT_SECRET`. This file is gitignored.
-2. **Bundle ID prefix**: set `BUNDLE_ID_PREFIX` (default `com.example`) to something
-   unique to your team, in `Secrets.xcconfig` or `Config/Base.xcconfig`. The App Group
-   becomes `group.<prefix>.foodtracker`.
+2. **Bundle ID prefix**: `BUNDLE_ID_PREFIX` in `Config/Base.xcconfig` is `com.lucasfeja`, so
+   the app is `com.lucasfeja.foodtracker` and the App Group is
+   `group.com.lucasfeja.foodtracker`. Don't override it in `Secrets.xcconfig`.
 3. **Signing**: open `Foodtracker.xcodeproj`. For the *Foodtracker* and
    *FoodtrackerWidgetsExtension* targets, pick your team under *Signing & Capabilities*
    (automatic signing registers the App Group), or set `DEVELOPMENT_TEAM` in

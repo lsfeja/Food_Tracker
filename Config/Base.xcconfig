@@ -12,7 +12,7 @@ DEVELOPMENT_TEAM =
 // Reverse-DNS prefix for all bundle identifiers. Must be unique for your team.
 // The app becomes $(BUNDLE_ID_PREFIX).foodtracker, the widget extension
 // $(BUNDLE_ID_PREFIX).foodtracker.widgets.
-BUNDLE_ID_PREFIX = com.example
+BUNDLE_ID_PREFIX = com.lucasfeja
 
 // App Group shared by the app and the widget extension (SwiftData store and
 // settings). Used by both entitlements files and exposed via Info.plist.
