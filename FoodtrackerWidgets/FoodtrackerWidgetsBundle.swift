@@ -5,6 +5,7 @@ import WidgetKit
 struct FoodtrackerWidgetsBundle: WidgetBundle {
     var body: some Widget {
         TodayWidget()
+        TrainingWidget()
         AddFoodControl()
     }
 }
