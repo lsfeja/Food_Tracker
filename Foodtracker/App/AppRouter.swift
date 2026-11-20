@@ -1,7 +1,21 @@
 import Foundation
 import Observation
 
-/// Global navigation state: the add-food sheet and deep-link handling.
+/// Tabs of the root `TabView`. Add new cases for future areas (e.g. analytics).
+enum AppTab: Hashable {
+    case nutrition
+    case plan
+}
+
+/// Screens pushed inside the Plan tab's navigation stack.
+enum PlanRoute: Hashable {
+    case session(UUID)
+    case library
+    case weekTemplates
+}
+
+/// Global navigation state: selected tab, the add-food sheet, the Plan stack and
+/// deep-link handling.
 @MainActor
 @Observable
 final class AppRouter {
@@ -12,18 +26,30 @@ final class AppRouter {
         var day: Date
     }
 
+    var selectedTab: AppTab = .nutrition
     var addFoodRequest: AddFoodRequest?
+    var planPath: [PlanRoute] = []
 
     func presentAddFood(_ mode: AddFoodMode = .search, day: Date = .now) {
         addFoodRequest = AddFoodRequest(mode: mode, day: day)
     }
 
+    func showSession(_ id: UUID) {
+        selectedTab = .plan
+        planPath = [.session(id)]
+    }
+
     func handle(_ link: DeepLink) {
         switch link {
         case .today:
-            break // Opening the app is enough; don't interrupt an open sheet.
+            selectedTab = .nutrition // Don't interrupt an open sheet.
         case .addFood(let mode):
+            selectedTab = .nutrition
             presentAddFood(mode)
+        case .plan:
+            selectedTab = .plan
+        case .session(let id):
+            showSession(id)
         }
     }
 

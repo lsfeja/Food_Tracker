@@ -8,7 +8,7 @@ struct FoodtrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            RootView()
                 .environment(router)
                 .environment(services)
                 .onOpenURL { url in

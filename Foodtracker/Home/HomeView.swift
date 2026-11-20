@@ -1,21 +1,17 @@
 import SwiftUI
 
-/// Root screen: today's dashboard plus the global add-food sheet.
+/// Nutrition tab: today's dashboard, history and settings.
 struct HomeView: View {
     private enum Route: Hashable {
         case history
     }
 
-    @Environment(AppRouter.self) private var router
-    @Environment(AppServices.self) private var services
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var today = Calendar.current.startOfDay(for: .now)
     @State private var showSettings = false
 
     var body: some View {
-        @Bindable var router = router
-
         NavigationStack {
             DayDashboard(day: today)
                 .id(today)
@@ -45,22 +41,11 @@ struct HomeView: View {
                     DayDashboard(day: day)
                 }
         }
-        .sheet(item: $router.addFoodRequest) { request in
-            AddFoodView(request: request)
-        }
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
-        .task {
-            // Cold launch (e.g. from the Control): pick up a pending deep link.
-            router.consumePendingDeepLink()
-            await services.activitySync.syncIfNeeded()
-        }
         .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            refreshToday()
-            router.consumePendingDeepLink()
-            Task { await services.activitySync.syncIfNeeded() }
+            if phase == .active { refreshToday() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             refreshToday()

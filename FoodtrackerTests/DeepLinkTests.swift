@@ -10,6 +10,14 @@ struct DeepLinkTests {
         #expect(DeepLink(url: URL(string: "foodtracker://today")!) == .today)
     }
 
+    @Test func parsesPlanAndSessionLinks() {
+        let id = UUID()
+        #expect(DeepLink(url: URL(string: "foodtracker://plan")!) == .plan)
+        #expect(DeepLink(url: URL(string: "foodtracker://session?id=\(id.uuidString)")!) == .session(id))
+        #expect(DeepLink(url: URL(string: "foodtracker://session?id=nope")!) == nil)
+        #expect(DeepLink(url: DeepLink.session(id).url) == .session(id))
+    }
+
     @Test func ignoresUnknownLinks() {
         #expect(DeepLink(url: URL(string: "foodtracker://foodtracker?code=abc")!) == nil)
         #expect(DeepLink(url: URL(string: "https://example.com/add")!) == nil)
