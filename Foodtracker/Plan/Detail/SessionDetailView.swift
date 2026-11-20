@@ -463,11 +463,3 @@ private struct GeneralPlanSections: View {
     }
 }
 
-/// Linked activity (filled in by the Strava milestone).
-struct LinkedActivitySection: View {
-    let session: PlannedSession
-
-    var body: some View {
-        EmptyView()
-    }
-}

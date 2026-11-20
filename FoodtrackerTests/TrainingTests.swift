@@ -325,3 +325,83 @@ struct WeekTemplateActionTests {
         #expect(copy.title == "C")
     }
 }
+
+@MainActor
+struct TrainingLinkerTests {
+    private func activity(_ id: String, type: String, at date: Date) -> ActivityRecord {
+        ActivityRecord(
+            source: .strava,
+            externalID: id,
+            name: "\(type) \(id)",
+            activityType: type,
+            startDate: date,
+            durationSeconds: 3600,
+            distanceMeters: 10_000,
+            activeCalories: 600,
+            caloriesEstimated: false,
+            detailsComplete: true
+        )
+    }
+
+    @Test func linksMatchingActivityAndMarksDone() throws {
+        let container = try SharedModelContainer.make(inMemory: true)
+        let context = container.mainContext
+        let calendar = BudgetCalculator.weekCalendar
+        let today = calendar.startOfDay(for: .now)
+
+        let run = PlanActions.addSession(WorkoutContent(sport: .run, title: "Easy Run"), on: today, in: context)
+        let gym = PlanActions.addSession(WorkoutContent(sport: .strength, title: "Push"), on: today, in: context)
+        let stravaRun = activity("1", type: "Run", at: today.addingTimeInterval(7 * 3600))
+        context.insert(stravaRun)
+
+        #expect(TrainingLinker.autoLink(days: [today], in: context))
+        #expect(run.linkedActivityKey == "strava:1")
+        #expect(run.isDone)
+        #expect(run.completedByLink)
+        #expect(gym.linkedActivityKey == nil)
+
+        // Unlinking reverts the status and stops auto-matching for this session.
+        TrainingLinker.unlink(run, in: context)
+        #expect(run.status == .planned)
+        #expect(TrainingLinker.autoLink(days: [today], in: context) == false)
+        #expect(run.linkedActivityKey == nil)
+
+        // Manual link works regardless of suppression.
+        TrainingLinker.link(run, to: stravaRun, in: context)
+        #expect(run.linkedActivityKey == "strava:1")
+        #expect(run.isLinkManual)
+    }
+
+    @Test func removesLinkWhenActivityDisappears() throws {
+        let container = try SharedModelContainer.make(inMemory: true)
+        let context = container.mainContext
+        let today = BudgetCalculator.weekCalendar.startOfDay(for: .now)
+
+        let ride = PlanActions.addSession(WorkoutContent(sport: .indoorRide), on: today, in: context)
+        let zwift = activity("9", type: "VirtualRide", at: today.addingTimeInterval(18 * 3600))
+        context.insert(zwift)
+        TrainingLinker.autoLink(days: [today], in: context)
+        #expect(ride.isDone)
+
+        context.delete(zwift)
+        try context.save()
+        TrainingLinker.autoLink(days: [today], in: context)
+        #expect(ride.linkedActivityKey == nil)
+        #expect(ride.status == .planned)
+    }
+
+    @Test func createsCompletedSessionFromUnplannedActivity() throws {
+        let container = try SharedModelContainer.make(inMemory: true)
+        let context = container.mainContext
+        let today = BudgetCalculator.weekCalendar.startOfDay(for: .now)
+        let swim = activity("5", type: "Swim", at: today.addingTimeInterval(6 * 3600))
+        context.insert(swim)
+
+        let session = TrainingLinker.createSession(from: swim, in: context)
+        #expect(session.sport == .swim)
+        #expect(session.isDone)
+        #expect(session.linkedActivityKey == "strava:5")
+        #expect(session.details.enduranceWorkout.durationMinutes == 60)
+        #expect(session.details.enduranceWorkout.distanceKm == 10)
+    }
+}

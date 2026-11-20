@@ -103,6 +103,9 @@ enum PlanActions {
     /// Saves and reloads widgets. `days` are days whose sessions changed (used to
     /// re-run activity matching).
     static func commit(_ context: ModelContext, touching days: [Date]) {
+        if !days.isEmpty {
+            TrainingLinker.autoLink(days: days, in: context)
+        }
         do {
             try context.save()
         } catch {

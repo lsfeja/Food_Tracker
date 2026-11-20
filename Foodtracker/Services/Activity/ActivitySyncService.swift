@@ -72,6 +72,11 @@ final class ActivitySyncService {
             }
         }
 
+        // Link (new) activities to planned sessions and mark them done.
+        if TrainingLinker.autoLink(in: context) {
+            changed = true
+        }
+
         if changed {
             do {
                 try context.save()
