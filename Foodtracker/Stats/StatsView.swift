@@ -107,7 +107,9 @@ struct StatsView: View {
         case .plan:
             PlanStatsSection(period: period, earliest: earliestDate)
         case .nutrition:
+            // Recreated per period so its date-bounded queries follow the selection.
             NutritionStatsSection(period: period, earliest: earliestDate)
+                .id(period)
         }
     }
 
@@ -160,23 +162,5 @@ struct StatsView: View {
         var descriptor = FetchDescriptor<FoodEntry>(sortBy: [SortDescriptor(\.timestamp)])
         descriptor.fetchLimit = 1
         return descriptor
-    }
-}
-
-// Category sections (filled in by the following milestones).
-
-struct PlanStatsSection: View {
-    let period: StatsPeriod
-    let earliest: Date?
-    var body: some View {
-        EmptyStatsCard(title: "Plan", message: "Coming soon", systemImage: "checklist")
-    }
-}
-
-struct NutritionStatsSection: View {
-    let period: StatsPeriod
-    let earliest: Date?
-    var body: some View {
-        EmptyStatsCard(title: "Nutrition", message: "Coming soon", systemImage: "fork.knife")
     }
 }

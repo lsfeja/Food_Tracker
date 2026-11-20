@@ -52,6 +52,11 @@ struct ActivitySnapshot: Equatable, Sendable {
     var movingSeconds: Double
     var elevationMeters: Double
     var isIndoor: Bool
+    /// Raw provider type (e.g. "WeightTraining"), for mapping to plan sports.
+    var activityType: String
+
+    /// Sport as used by planned sessions (`.custom` if unknown).
+    var planSport: SportType { SportType.fromActivityType(activityType) ?? .custom }
 
     init(
         id: String,
@@ -61,7 +66,8 @@ struct ActivitySnapshot: Equatable, Sendable {
         distanceMeters: Double = 0,
         movingSeconds: Double = 0,
         elevationMeters: Double = 0,
-        isIndoor: Bool = false
+        isIndoor: Bool = false,
+        activityType: String = ""
     ) {
         self.id = id
         self.name = name
@@ -71,6 +77,7 @@ struct ActivitySnapshot: Equatable, Sendable {
         self.movingSeconds = movingSeconds
         self.elevationMeters = elevationMeters
         self.isIndoor = isIndoor
+        self.activityType = activityType
     }
 
     init(record: ActivityRecord) {
@@ -82,7 +89,8 @@ struct ActivitySnapshot: Equatable, Sendable {
             distanceMeters: record.distanceMeters,
             movingSeconds: record.durationSeconds,
             elevationMeters: record.elevationMeters,
-            isIndoor: record.isIndoor || record.statsSport == .indoorRide
+            isIndoor: record.isIndoor || record.statsSport == .indoorRide,
+            activityType: record.activityType
         )
     }
 }
