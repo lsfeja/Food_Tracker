@@ -10,6 +10,7 @@ enum SharedModelContainer {
     static let schema = Schema([
         Food.self, FoodEntry.self, ActivityRecord.self,
         PlannedSession.self, WorkoutTemplate.self, WeekTemplate.self,
+        YearlyGoal.self,
     ])
 
     /// Process-wide container (app and widget extension each get their own instance).

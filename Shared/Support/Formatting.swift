@@ -50,6 +50,21 @@ enum Format {
         km < 1 ? "\(Int((km * 1000).rounded())) m" : distance(km: km)
     }
 
+    /// Large distances without decimals ("4,210"), small ones with one ("12.4").
+    static func distanceValue(km: Double) -> String {
+        km >= 100
+            ? Int(km.rounded()).formatted()
+            : km.formatted(.number.precision(.fractionLength(0...1)))
+    }
+
+    /// Hours: "123", "12.5"
+    static func hoursValue(seconds: Double) -> String {
+        let hours = seconds / 3600
+        return hours >= 100
+            ? Int(hours.rounded()).formatted()
+            : hours.formatted(.number.precision(.fractionLength(0...1)))
+    }
+
     /// Weight in kg without unit: "80", "82.5"
     static func weight(_ kg: Double) -> String {
         kg.formatted(.number.precision(.fractionLength(0...2)))

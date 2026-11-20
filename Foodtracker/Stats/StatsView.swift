@@ -157,14 +157,6 @@ struct StatsView: View {
 
 // Category sections (filled in by the following milestones).
 
-struct EnduranceStatsSection: View {
-    let period: StatsPeriod
-    let earliest: Date?
-    var body: some View {
-        EmptyStatsCard(title: "Endurance", message: "Coming soon", systemImage: "figure.run")
-    }
-}
-
 struct StrengthStatsSection: View {
     let period: StatsPeriod
     let earliest: Date?
