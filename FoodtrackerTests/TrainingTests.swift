@@ -353,6 +353,7 @@ struct TrainingLinkerTests {
         let gym = PlanActions.addSession(WorkoutContent(sport: .strength, title: "Push"), on: today, in: context)
         let stravaRun = activity("1", type: "Run", at: today.addingTimeInterval(7 * 3600))
         context.insert(stravaRun)
+        try context.save()
 
         #expect(TrainingLinker.autoLink(days: [today], in: context))
         #expect(run.linkedActivityKey == "strava:1")
@@ -380,6 +381,7 @@ struct TrainingLinkerTests {
         let ride = PlanActions.addSession(WorkoutContent(sport: .indoorRide), on: today, in: context)
         let zwift = activity("9", type: "VirtualRide", at: today.addingTimeInterval(18 * 3600))
         context.insert(zwift)
+        try context.save()
         TrainingLinker.autoLink(days: [today], in: context)
         #expect(ride.isDone)
 
