@@ -128,7 +128,7 @@ struct EnduranceStatsSection: View {
             Button {
                 editingGoal = true
             } label: {
-                Label("Set a \(String(period.year)) \(filter == .all ? "" : filter.displayName.lowercased() + " ")goal", systemImage: "target")
+                Label(setGoalTitle, systemImage: "target")
                     .font(.subheadline)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
@@ -137,6 +137,11 @@ struct EnduranceStatsSection: View {
             .buttonStyle(.plain)
             .foregroundStyle(Color.accentColor)
         }
+    }
+
+    private var setGoalTitle: String {
+        let sport = filter == .all ? "" : "\(filter.displayName.lowercased()) "
+        return "Set a \(String(period.year)) \(sport)goal"
     }
 
     private var goal: YearlyGoal? {
