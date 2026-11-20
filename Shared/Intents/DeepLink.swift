@@ -3,13 +3,14 @@ import Foundation
 /// In-app destinations reachable from widgets, controls, intents and URLs.
 ///
 /// URL format: `foodtracker://today`, `foodtracker://add?mode=search|barcode|label`,
-/// `foodtracker://plan`, `foodtracker://session?id=<UUID>`.
+/// `foodtracker://plan`, `foodtracker://session?id=<UUID>`, `foodtracker://stats`.
 /// (`foodtracker://foodtracker` is reserved for the Strava OAuth callback.)
 enum DeepLink: Equatable, Sendable {
     case today
     case addFood(AddFoodMode)
     case plan
     case session(UUID)
+    case stats
 
     static let scheme = "foodtracker"
 
@@ -24,6 +25,8 @@ enum DeepLink: Equatable, Sendable {
             self = .addFood(modeValue.flatMap(AddFoodMode.init(rawValue:)) ?? .search)
         case "plan":
             self = .plan
+        case "stats":
+            self = .stats
         case "session":
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             guard let idValue = components?.queryItems?.first(where: { $0.name == "id" })?.value,
@@ -45,6 +48,8 @@ enum DeepLink: Equatable, Sendable {
             URL(string: "\(Self.scheme)://plan")!
         case .session(let id):
             URL(string: "\(Self.scheme)://session?id=\(id.uuidString)")!
+        case .stats:
+            URL(string: "\(Self.scheme)://stats")!
         }
     }
 }

@@ -6,6 +6,7 @@ import SwiftUI
 enum AppTab: Hashable {
     case nutrition
     case plan
+    case stats
 }
 
 /// Screens pushed inside the Plan tab's navigation stack.
@@ -52,6 +53,8 @@ final class AppRouter {
             selectedTab = .plan
         case .session(let id):
             showSession(id)
+        case .stats:
+            selectedTab = .stats
         }
     }
 

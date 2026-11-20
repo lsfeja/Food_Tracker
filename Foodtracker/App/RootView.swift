@@ -17,6 +17,9 @@ struct RootView: View {
             Tab("Plan", systemImage: "calendar", value: AppTab.plan) {
                 PlanView()
             }
+            Tab("Stats", systemImage: "chart.xyaxis.line", value: AppTab.stats) {
+                StatsView()
+            }
         }
         .sheet(item: $router.addFoodRequest) { request in
             AddFoodView(request: request)
