@@ -1,26 +1,65 @@
 import SwiftData
 import SwiftUI
 
-/// Add a session to a day: new session by sport, or (later) from the library.
+/// Add a session to a day: from the workout library (copy on use) or a new one.
 struct AddSessionSheet: View {
     let day: Date
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Query private var templates: [WorkoutTemplate]
+
     @State private var path: [WorkoutContent] = []
+    @State private var searchText = ""
+
+    init(day: Date) {
+        self.day = day
+        _templates = Query(sort: [
+            SortDescriptor(\WorkoutTemplate.useCount, order: .reverse),
+            SortDescriptor(\WorkoutTemplate.name),
+        ])
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
             List {
-                Section("New Session") {
-                    SportGrid { sport in
-                        path.append(WorkoutContent(sport: sport))
+                if searchText.isEmpty {
+                    Section("New Session") {
+                        SportGrid { sport in
+                            path.append(WorkoutContent(sport: sport))
+                        }
+                        .listRowInsets(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
                     }
-                    .listRowInsets(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
+                }
+
+                Section {
+                    if filtered.isEmpty {
+                        Text(templates.isEmpty
+                             ? "Saved workouts appear here. Use “Save to Library” on a session or create them in the library."
+                             : "No workout matches “\(searchText)”.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(filtered) { template in
+                        Button {
+                            LibraryActions.schedule(template, on: day, in: context)
+                            dismiss()
+                        } label: {
+                            HStack {
+                                WorkoutTemplateRow(template: template)
+                                Image(systemName: "plus.circle")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("From Library")
                 }
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search library")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -37,6 +76,14 @@ struct AddSessionSheet: View {
 
     private var title: String {
         "Add to \(day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))"
+    }
+
+    private var filtered: [WorkoutTemplate] {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return templates }
+        return templates.filter {
+            $0.displayName.localizedStandardContains(query) || $0.sport.displayName.localizedStandardContains(query)
+        }
     }
 }
 
