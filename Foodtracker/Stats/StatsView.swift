@@ -34,9 +34,9 @@ struct StatsView: View {
     @AppStorage("stats.category") private var categoryRaw = Category.endurance.rawValue
     @State private var year = BudgetCalculator.weekCalendar.component(.year, from: .now)
 
-    @Query(Self.earliestActivityDescriptor) private var earliestActivity: [ActivityRecord]
-    @Query(Self.earliestSessionDescriptor) private var earliestSession: [PlannedSession]
-    @Query(Self.earliestEntryDescriptor) private var earliestEntry: [FoodEntry]
+    @Query(StatsView.earliestActivityDescriptor) private var earliestActivity: [ActivityRecord]
+    @Query(StatsView.earliestSessionDescriptor) private var earliestSession: [PlannedSession]
+    @Query(StatsView.earliestEntryDescriptor) private var earliestEntry: [FoodEntry]
 
     private var calendar: Calendar { BudgetCalculator.weekCalendar }
 
@@ -54,8 +54,8 @@ struct StatsView: View {
                     ChipPicker(
                         options: Category.allCases,
                         selection: categoryBinding,
-                        title: \.title,
-                        systemImage: \.systemImage
+                        title: { $0.title },
+                        systemImage: { $0.systemImage }
                     )
 
                     Text(period.title(calendar: calendar))
