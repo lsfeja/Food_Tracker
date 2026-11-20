@@ -44,15 +44,18 @@ struct PlanStatsSection: View {
             if report.adherence.contains(where: { $0.planned > 0 }) {
                 Chart {
                     ForEach(report.adherence) { bucket in
+                        // Unstacked: completed is drawn over planned, not on top of it.
                         BarMark(
                             x: .value("Period", bucket.start, unit: report.adherenceBucket.component),
-                            y: .value("Sessions", bucket.planned)
+                            y: .value("Sessions", bucket.planned),
+                            stacking: .unstacked
                         )
                         .foregroundStyle(Color.secondary.opacity(0.25))
                         .cornerRadius(3)
                         BarMark(
                             x: .value("Period", bucket.start, unit: report.adherenceBucket.component),
-                            y: .value("Sessions", bucket.completed)
+                            y: .value("Sessions", bucket.completed),
+                            stacking: .unstacked
                         )
                         .foregroundStyle(Color.accentColor)
                         .cornerRadius(3)
