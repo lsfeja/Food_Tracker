@@ -87,13 +87,13 @@ struct StatsPeriod: Hashable, Sendable {
     }
 
     func title(now: Date = .now, calendar: Calendar) -> String {
-        let interval = interval(now: now, calendar: calendar)
+        let range = self.interval(now: now, calendar: calendar)
         switch kind {
         case .week:
-            let end = interval.end.addingTimeInterval(-1)
-            return "\(interval.start.formatted(.dateTime.day().month(.abbreviated))) – \(end.formatted(.dateTime.day().month(.abbreviated).year()))"
+            let end = range.end.addingTimeInterval(-1)
+            return "\(range.start.formatted(.dateTime.day().month(.abbreviated))) – \(end.formatted(.dateTime.day().month(.abbreviated).year()))"
         case .month:
-            return interval.start.formatted(.dateTime.month(.wide).year())
+            return range.start.formatted(.dateTime.month(.wide).year())
         case .year:
             return year == calendar.component(.year, from: now) ? "\(year) to date" : String(year)
         case .all:
