@@ -13,6 +13,7 @@ final class ActivityRecord {
     var activityType: String = ""
     var startDate: Date = Date.now
     var durationSeconds: Double = 0
+    var distanceMeters: Double = 0
     var activeCalories: Double = 0
     /// `true` if calories were estimated (e.g. derived from kilojoules) rather than
     /// reported by the provider.
@@ -28,6 +29,7 @@ final class ActivityRecord {
         activityType: String,
         startDate: Date,
         durationSeconds: Double,
+        distanceMeters: Double = 0,
         activeCalories: Double,
         caloriesEstimated: Bool,
         detailsComplete: Bool
@@ -38,6 +40,7 @@ final class ActivityRecord {
         self.activityType = activityType
         self.startDate = startDate
         self.durationSeconds = durationSeconds
+        self.distanceMeters = distanceMeters
         self.activeCalories = activeCalories
         self.caloriesEstimated = caloriesEstimated
         self.detailsComplete = detailsComplete
@@ -46,5 +49,18 @@ final class ActivityRecord {
     var source: ActivitySourceKind {
         get { ActivitySourceKind(rawValue: sourceRaw) ?? .strava }
         set { sourceRaw = newValue.rawValue }
+    }
+
+    /// Stable identifier used to link planned sessions ("strava:123456").
+    var linkKey: String { "\(sourceRaw):\(externalID)" }
+
+    /// Sport of the activity, if it maps to a planned-session sport.
+    var sportType: SportType? { SportType.fromActivityType(activityType) }
+
+    /// "58 min · 10.2 km"
+    var summary: String {
+        var parts = [Format.duration(minutes: durationSeconds / 60)]
+        if distanceMeters > 0 { parts.append(Format.distance(km: distanceMeters / 1000)) }
+        return parts.joined(separator: " · ")
     }
 }

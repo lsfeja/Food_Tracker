@@ -46,6 +46,7 @@ struct StravaTests {
         #expect(imported.externalID == "12345678987654321")
         #expect(imported.type == "MountainBikeRide")
         #expect(imported.durationSeconds == 3600)
+        #expect(imported.distanceMeters == 30000)
         #expect(imported.activeCalories == 813)
         #expect(imported.caloriesEstimated)
         #expect(imported.detailsComplete == false)

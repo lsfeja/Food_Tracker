@@ -7,6 +7,7 @@ struct ImportedActivity: Equatable, Sendable {
     var type: String
     var startDate: Date
     var durationSeconds: Double
+    var distanceMeters: Double = 0
     /// Raw active calories reported (or estimated) by the provider.
     var activeCalories: Double
     var caloriesEstimated: Bool

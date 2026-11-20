@@ -121,6 +121,8 @@ struct StravaSummaryActivity: Decodable, Sendable {
     let startDate: Date
     let elapsedTime: Double?
     let movingTime: Double?
+    /// Meters.
+    let distance: Double?
     /// Only for rides with power data.
     let kilojoules: Double?
 }
@@ -150,6 +152,7 @@ extension StravaSummaryActivity {
             type: sportType ?? type ?? "Workout",
             startDate: startDate,
             durationSeconds: movingTime ?? elapsedTime ?? 0,
+            distanceMeters: distance ?? 0,
             activeCalories: resolved.kcal,
             caloriesEstimated: resolved.estimated,
             detailsComplete: detailsComplete

@@ -169,6 +169,7 @@ extension ImportedActivity {
             type: record.activityType,
             startDate: record.startDate,
             durationSeconds: record.durationSeconds,
+            distanceMeters: record.distanceMeters,
             activeCalories: record.activeCalories,
             caloriesEstimated: record.caloriesEstimated,
             detailsComplete: record.detailsComplete
@@ -185,6 +186,7 @@ extension ActivityRecord {
             activityType: activity.type,
             startDate: activity.startDate,
             durationSeconds: activity.durationSeconds,
+            distanceMeters: activity.distanceMeters,
             activeCalories: activity.activeCalories,
             caloriesEstimated: activity.caloriesEstimated,
             detailsComplete: activity.detailsComplete
@@ -196,6 +198,7 @@ extension ActivityRecord {
         activityType = activity.type
         startDate = activity.startDate
         durationSeconds = activity.durationSeconds
+        distanceMeters = activity.distanceMeters
         activeCalories = activity.activeCalories
         caloriesEstimated = activity.caloriesEstimated
         detailsComplete = activity.detailsComplete

@@ -7,7 +7,10 @@ import SwiftData
 /// Group is unavailable (signing not configured yet), it falls back to the app's
 /// own container so the app still works, but widgets will then show no data.
 enum SharedModelContainer {
-    static let schema = Schema([Food.self, FoodEntry.self, ActivityRecord.self])
+    static let schema = Schema([
+        Food.self, FoodEntry.self, ActivityRecord.self,
+        PlannedSession.self, WorkoutTemplate.self, WeekTemplate.self,
+    ])
 
     /// Process-wide container (app and widget extension each get their own instance).
     static let shared: ModelContainer = {
