@@ -116,7 +116,8 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|
 - `food_entries` store **absolute** nutrients (snapshot); editing a food never rewrites
   history. Foods are hidden, not deleted. `source` manual/barcode/label/ai, `is_estimated`.
 - Budget (V3, `shared/weeklyBudget.ts`, pure, heavily tested): week plan = (base + A) × 7 +
-  slider, A = 4-week average of counted active kcal (Strava × 50–100 %). Activity above A
+  slider, A = 4-week average of counted active kcal (Strava × 50–100 %), each day of the
+  previous week weighted double (`PREVIOUS_WEEK_WEIGHT`). Activity above A
   is added to that day and the rest of the week (at least 3 days, crossing into next week);
   activity below A cuts the following days (rest days from the plan: from the day itself).
   Food above/below a finished day's target moves to the following days and into the next

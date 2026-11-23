@@ -48,11 +48,15 @@ describe("weekly budget: plan", () => {
     expect(result.days[MON].target).toBeCloseTo(2900);
   });
 
-  it("learns the average from the 4 completed weeks", () => {
+  it("learns the average from the 4 completed weeks, the previous week counting double", () => {
     const inputs = history(300);
     for (let i = 1; i <= 7; i++) inputs[addDays(MON, -i)] = { eaten: 0, active: 1000 };
-    // 3 weeks × 300 + 1 week × 1000 → 475
-    expect(activeAverage(inputs, MON, config())).toBeCloseTo(475);
+    // (3 weeks × 300 + 2 × 1 week × 1000) / 5 → 580
+    expect(activeAverage(inputs, MON, config())).toBeCloseTo(580);
+    // The week before that counts once: (2 × 300 + 1000 + 2 × 300) / 5 → 440
+    const older = history(300);
+    for (let i = 8; i <= 14; i++) older[addDays(MON, -i)] = { eaten: 0, active: 1000 };
+    expect(activeAverage(older, MON, config())).toBeCloseTo(440);
     // The counted share applies to the average too.
     expect(activeAverage(history(500), MON, config({ activePercent: 80 }))).toBeCloseTo(400);
   });
@@ -79,9 +83,10 @@ describe("weekly budget: filling up", () => {
     expect(result.days[SAT].target).toBeCloseTo(3100);
     expect(result.days[SUN].target).toBeCloseTo(3100);
     expect(result.weeks[NEXT_MON].spillIn).toBeCloseTo(200);
-    // The next week learned from this week (Ø now includes the 1,100 kcal Saturday).
+    // The next week learned from this week (Ø now includes the 1,100 kcal Saturday, counted
+    // double as part of the previous week: 28 days with 7 of them twice → 35 shares).
     const nextStandard = result.weeks[NEXT_MON].params.standard;
-    expect(nextStandard).toBeCloseTo(2900 + 600 / 28);
+    expect(nextStandard).toBeCloseTo(2900 + (2 * 600) / 35);
     expect(result.days[NEXT_MON].target).toBeCloseTo(nextStandard + 200);
     expect(result.days[NEXT_TUE].target).toBeCloseTo(nextStandard);
   });
@@ -185,6 +190,15 @@ describe("weekly budget: slider and limits", () => {
 });
 
 describe("weekly budget: vacation days", () => {
+  it("are left out of the weighted average", () => {
+    const inputs = history(300);
+    // Previous week: 1,000 on Mon–Sat, Sunday is a vacation day with a lot of activity.
+    for (let i = 2; i <= 7; i++) inputs[addDays(MON, -i)] = { eaten: 0, active: 1000 };
+    inputs[addDays(MON, -1)] = { eaten: 0, active: 5000, untracked: true };
+    // (21 × 300 + 2 × 6 × 1000) / (21 + 12)
+    expect(activeAverage(inputs, MON, config())).toBeCloseTo((21 * 300 + 12 * 1000) / 33);
+  });
+
   it("are skipped and don't affect the average", () => {
     const inputs = week({ [WED]: { untracked: true, active: 3000, eaten: 5000 } });
     inputs[addDays(MON, -3)] = { eaten: 0, active: 9000, untracked: true };

@@ -159,7 +159,7 @@ function WeeklyBudgetSection({ week }: { week: WeekSummary | null }) {
   return (
     <Section
       header="Weekly Budget"
-      footer="Your week is planned with base + your average active calories of the last 4 weeks. Rest days (from the Plan tab) get at least base + the rest-day minimum in % of that average. Workouts above the average add to the rest of the week (at least 3 days), days with less activity and food above the target are taken from the following days. Food you don't eat carries over, even into the next week. Cuts that don't fit into the week move to the next week by the share below."
+      footer="Your week is planned with base + your average active calories of the last 4 weeks (the previous week counts double). Rest days (from the Plan tab) get at least base + the rest-day minimum in % of that average. Workouts above the average add to the rest of the week (at least 3 days), days with less activity and food above the target are taken from the following days. Food you don't eat carries over, even into the next week. Cuts that don't fit into the week move to the next week by the share below."
     >
       <LabeledRow label="Ø active (4 weeks)" value={p ? `${Format.kcal(p.average)} kcal/day` : "–"} />
       <LabeledRow label="Daily target" value={p ? `${Format.kcal(p.standard)} kcal` : "–"} />

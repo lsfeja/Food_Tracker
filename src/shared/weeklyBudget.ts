@@ -2,7 +2,7 @@
  * Weekly budget with "filling up" (V3).
  *
  * - A = average counted active kcal per tracked day over the 4 completed weeks before
- *   the week (fixed for the whole week).
+ *   the week, the previous week weighted double (2 : 1 : 1 : 1; fixed for the whole week).
  * - Planned demand N = base (rest + everyday movement) + A. Standard daily target
  *   T = N + goal (slider). Weekly plan = T × tracked days.
  * - Activity deviation of a day (actual − A):
@@ -25,6 +25,8 @@ export const MAX_GOAL_SURPLUS = 750;
 /** Weeks simulated before the first requested week (carry-over chain). */
 export const CHAIN_WEEKS = 8;
 const AVERAGE_DAYS = 28;
+/** Weight of each day of the previous week in A (the 3 weeks before count once). */
+export const PREVIOUS_WEEK_WEIGHT = 2;
 const EPS = 1e-6;
 
 export interface BudgetConfig {
@@ -53,7 +55,7 @@ export interface BudgetDayInput {
 }
 
 export interface WeekParams {
-  /** A: average counted active kcal per tracked day (4 weeks). */
+  /** A: average counted active kcal per tracked day (4 weeks, previous week double). */
   average: number;
   /** N = base + A. */
   demand: number;
@@ -118,17 +120,21 @@ export interface BudgetResult {
 export const countedActive = (raw: number, config: Pick<BudgetConfig, "activeEnabled" | "activePercent">) =>
   config.activeEnabled && raw > 0 ? (raw * Math.min(Math.max(config.activePercent, 50), 100)) / 100 : 0;
 
-/** A for the week starting `start`: the 4 completed weeks before it, vacation days excluded. */
+/**
+ * A for the week starting `start`: weighted average over the 4 completed weeks before it.
+ * Each day of the previous week counts double, vacation days are left out.
+ */
 export function activeAverage(inputs: Record<Day, BudgetDayInput>, start: Day, config: BudgetConfig): number {
   let sum = 0;
-  let days = 0;
+  let weights = 0;
   for (let offset = AVERAGE_DAYS; offset >= 1; offset--) {
     const input = inputs[addDays(start, -offset)];
     if (input?.untracked) continue;
-    days++;
-    sum += countedActive(input?.active ?? 0, config);
+    const weight = offset <= 7 ? PREVIOUS_WEEK_WEIGHT : 1;
+    weights += weight;
+    sum += weight * countedActive(input?.active ?? 0, config);
   }
-  return days > 0 ? sum / days : 0;
+  return weights > 0 ? sum / weights : 0;
 }
 
 export function weekParams(config: BudgetConfig, average: number): WeekParams {
