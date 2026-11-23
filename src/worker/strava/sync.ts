@@ -5,14 +5,15 @@ import { autoLink } from "../linker";
 import { type DetailedActivity, type ImportedActivity, loadConnection, NotConnectedError, PROVIDER, StravaClient, type SummaryActivity, toImported } from "./client";
 import { RateLimitedError } from "./rateLimiter";
 
-export const LOOKBACK_DAYS = 14;
+/** 4 weeks: the weekly budget averages exact calories of the last 4 weeks. */
+export const LOOKBACK_DAYS = 28;
 export const MIN_AUTO_SYNC_INTERVAL = 10 * 60 * 1000;
 const MAX_PAGES = 3;
 const PAGE_SIZE = 100;
 /** Detail requests per sync (subrequest budget); the rest follow in the next sync. */
 const MAX_DETAILS = 25;
 
-/** The regular window: the last 14 days, at least back to Monday. */
+/** The regular window: the last 28 days, at least back to Monday. */
 export function syncStartDay(today: Day): Day {
   const lookback = addDays(today, -(LOOKBACK_DAYS - 1));
   const monday = weekStart(today);

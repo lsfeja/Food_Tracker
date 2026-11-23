@@ -1,20 +1,22 @@
-import { addDays, type Day, diffDays, weekStart } from "./days";
+import type { Day } from "./days";
 import { addNutrients, type Nutrients, zeroNutrients } from "./nutrients";
-import { type BudgetSettings, effectiveWeeklyLimit, type NutritionTargets, type UserSettings } from "./settings";
+import { budgetConfig, type NutritionTargets, type UserSettings } from "./settings";
+import { type BudgetDayInput, type BudgetResult, type DayPlan, simulateBudget, type WeekSummary } from "./weeklyBudget";
 
 /** Raw totals of one day. */
 export interface DayTotals {
   eaten: Nutrients;
   /** Active calories from activities, before the counted percentage. */
   activeCalories: number;
+  /** A rest day is planned (Plan tab). */
+  restDay?: boolean;
+  /** Vacation: not tracked. */
+  untracked?: boolean;
 }
 
 export interface CalorieBudget {
-  /** Daily target, or in weekly mode the allowance derived from the weekly limit. */
-  baseTarget: number;
-  /** Counted active calories (after percentage). */
-  activeBonus: number;
   eaten: number;
+  /** Tagesziel. */
   total: number;
   remaining: number;
   isOver: boolean;
@@ -22,97 +24,61 @@ export interface CalorieBudget {
   progress: number;
 }
 
-export interface WeeklyBalance {
-  weekStart: Day;
-  limit: number;
-  activeBonus: number;
-  eaten: number;
-  daysRemaining: number;
-  total: number;
-  remaining: number;
-}
-
 export interface DayBudget {
   day: Day;
   calories: CalorieBudget;
   eaten: Nutrients;
+  /** Counted active kcal of the day. */
+  active: number;
   targets: NutritionTargets;
-  weekly: WeeklyBalance | null;
+  plan: DayPlan | null;
+  week: WeekSummary | null;
 }
 
 export const emptyTotals = (): DayTotals => ({ eaten: zeroNutrients(), activeCalories: 0 });
 
-export function calorieBudget(baseTarget: number, activeBonus: number, eaten: number): CalorieBudget {
-  const total = baseTarget + activeBonus;
+export function calorieBudget(total: number, eaten: number): CalorieBudget {
   const remaining = total - eaten;
-  return {
-    baseTarget,
-    activeBonus,
-    eaten,
-    total,
-    remaining,
-    isOver: remaining < 0,
-    progress: total > 0 ? eaten / total : eaten > 0 ? 1 : 0,
-  };
+  return { eaten, total, remaining, isOver: remaining < 0, progress: total > 0 ? eaten / total : eaten > 0 ? 1 : 0 };
 }
 
-/** Share of raw active calories added to the budget. */
-export function countedActiveCalories(raw: number, budget: BudgetSettings): number {
-  if (!budget.activeCaloriesEnabled || raw <= 0) return 0;
-  const percent = Math.min(Math.max(budget.activeCaloriesPercent, 50), 100);
-  return Math.round((raw * percent) / 100);
+export function budgetInputs(totals: Record<Day, DayTotals>): Record<Day, BudgetDayInput> {
+  const inputs: Record<Day, BudgetDayInput> = {};
+  for (const [day, t] of Object.entries(totals)) {
+    inputs[day] = { eaten: t.eaten.kcal, active: t.activeCalories, restDay: t.restDay, untracked: t.untracked };
+  }
+  return inputs;
 }
 
-/**
- * Budget for `day`. Remaining = target + counted active − eaten. Weekly mode (rolling,
- * Monday-based): allowance = (limit + counted active of earlier days − eaten on earlier
- * days) ÷ days left including today.
- */
-export function budgetFor(day: Day, settings: Pick<UserSettings, "targets" | "budget">, totalsByDay: Record<Day, DayTotals>): DayBudget {
-  const totals = totalsByDay[day] ?? emptyTotals();
-  const activeToday = countedActiveCalories(totals.activeCalories, settings.budget);
-  const { targets } = settings;
+/** Weekly budget for the days from `from` to `to` (see weeklyBudget.ts). */
+export function budgetRange(
+  settings: Pick<UserSettings, "targets" | "budget">,
+  totals: Record<Day, DayTotals>,
+  today: Day,
+  from: Day,
+  to: Day,
+): BudgetResult {
+  return simulateBudget(budgetInputs(totals), budgetConfig(settings), today, from, to);
+}
 
-  if (!settings.budget.weeklyModeEnabled) {
-    return {
-      day,
-      calories: calorieBudget(targets.kcal, activeToday, totals.eaten.kcal),
-      eaten: totals.eaten,
-      targets,
-      weekly: null,
-    };
-  }
-
-  const start = weekStart(day);
-  const elapsed = diffDays(start, day);
-  let previousEaten = 0;
-  let previousActive = 0;
-  for (let index = 0; index < elapsed; index++) {
-    const previous = totalsByDay[addDays(start, index)] ?? emptyTotals();
-    previousEaten += previous.eaten.kcal;
-    previousActive += countedActiveCalories(previous.activeCalories, settings.budget);
-  }
-  const daysRemaining = Math.max(7 - elapsed, 1);
-  const limit = effectiveWeeklyLimit(settings.budget, targets.kcal);
-  const allowance = Math.round(Math.max((limit + previousActive - previousEaten) / daysRemaining, 0));
-  const activeBonus = previousActive + activeToday;
-  const eaten = previousEaten + totals.eaten.kcal;
-
+export function dayBudget(day: Day, totals: Record<Day, DayTotals>, result: BudgetResult, targets: NutritionTargets): DayBudget {
+  const dayTotals = totals[day] ?? emptyTotals();
+  const plan = result.days[day] ?? null;
+  const week = plan ? result.weeks[plan.week] : null;
   return {
     day,
-    calories: calorieBudget(allowance, activeToday, totals.eaten.kcal),
-    eaten: totals.eaten,
+    calories: calorieBudget(plan?.target ?? 0, dayTotals.eaten.kcal),
+    eaten: dayTotals.eaten,
+    active: plan?.active ?? 0,
     targets,
-    weekly: {
-      weekStart: start,
-      limit,
-      activeBonus,
-      eaten,
-      daysRemaining,
-      total: limit + activeBonus,
-      remaining: limit + activeBonus - eaten,
-    },
+    plan,
+    week,
   };
+}
+
+/** Budget of one day; `totals` must reach back to `inputStart(day)`. */
+export function budgetFor(day: Day, settings: Pick<UserSettings, "targets" | "budget">, totals: Record<Day, DayTotals>, today: Day): DayBudget {
+  return dayBudget(day, totals, budgetRange(settings, totals, today, day, day), settings.targets);
 }
 
 export interface EntryLike {
@@ -141,3 +107,4 @@ export function totalsByDay(entries: EntryLike[], activities: ActivityLike[]): R
   }
   return result;
 }
+

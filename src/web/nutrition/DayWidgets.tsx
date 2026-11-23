@@ -1,6 +1,7 @@
 import { Barcode, Bike, Dumbbell, Flame, Footprints, Mountain, ScanText, Sparkles, Waves } from "lucide-react";
 import type { ActivityDTO, EntryDTO } from "../../shared/api";
-import type { CalorieBudget, WeeklyBalance } from "../../shared/budget";
+import type { CalorieBudget } from "../../shared/budget";
+import type { WeekSummary } from "../../shared/weeklyBudget";
 import type { EntrySource } from "../../shared/food";
 import * as Format from "../../shared/format";
 import { ProgressBar } from "../components/ui";
@@ -63,23 +64,30 @@ export function MacroBar({ title, value, target, secondary }: { title: string; v
   );
 }
 
-export function WeeklyBalanceView({ balance }: { balance: WeeklyBalance }) {
-  const over = balance.remaining < 0;
+/** Weekly budget: what's left this week, the plan and how far activity filled it up. */
+export function WeekBudgetView({ week }: { week: WeekSummary }) {
+  const over = week.remaining < 0;
+  const carry = week.carryIn + week.spillIn;
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="row">
         <span className="subheadline secondary grow">This week</span>
-        <span className="footnote secondary">{balance.daysRemaining === 1 ? "last day" : `${balance.daysRemaining} days left`}</span>
+        <span className="footnote secondary">{week.daysRemaining === 1 ? "last day" : week.daysRemaining === 0 ? "done" : `${week.daysRemaining} days left`}</span>
       </div>
       <div className="row" style={{ alignItems: "baseline", gap: 4 }}>
-        <span className="title2 tabular">{Format.kcal(Math.abs(balance.remaining))}</span>
+        <span className="title2 tabular">{Format.kcal(Math.abs(week.remaining))}</span>
         <span className="subheadline" style={{ color: over ? "var(--orange)" : "var(--label-2)" }}>
           {over ? "kcal over" : "kcal left"}
         </span>
         <span className="spacer" />
-        <span className="footnote secondary tabular">of {Format.kcal(balance.total)}</span>
+        <span className="footnote secondary tabular">of {Format.kcal(week.total)}</span>
       </div>
-      <ProgressBar progress={balance.total > 0 ? balance.eaten / balance.total : 0} height={6} over={over} />
+      <ProgressBar progress={week.total > 0 ? week.eaten / week.total : 0} height={6} over={over} />
+      <div className="caption secondary tabular" style={{ lineHeight: "17px" }}>
+        Plan {Format.kcal(week.plan)} · Ø active {Format.kcal(week.params.average)}/day
+        {week.filledPlan > 0 && ` · filled ${Format.kcal(week.filled)} of ${Format.kcal(week.filledPlan)}`}
+        {Math.abs(carry) >= 1 && ` · from last week ${Format.signedKcal(carry)}`}
+      </div>
     </div>
   );
 }

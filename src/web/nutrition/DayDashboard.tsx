@@ -13,12 +13,14 @@ import { ActionSheet } from "../components/Sheet";
 import { SwipeRow } from "../components/SwipeRow";
 import { EmptyState, Row, Section, Spinner } from "../components/ui";
 import { useAddFood } from "./add/AddFoodContext";
-import { ActivityRowContent, CalorieRing, EntryRowContent, MacroBar, WeeklyBalanceView } from "./DayWidgets";
+import { useToday } from "../lib/useToday";
+import { ActivityRowContent, CalorieRing, EntryRowContent, MacroBar, WeekBudgetView } from "./DayWidgets";
 import { EditEntrySheet } from "./EditEntrySheet";
 
 /** Progress and entries for one day. Used for "Today" and for past days from History. */
 export function DayDashboard({ day }: { day: Day }) {
   const settings = useSettings();
+  const today = useToday();
   const query = useDay(day);
   const client = useQueryClient();
   const sync = useActivitySync();
@@ -26,7 +28,7 @@ export function DayDashboard({ day }: { day: Day }) {
   const [editing, setEditing] = useState<EntryDTO | null>(null);
 
   const data = query.data;
-  const budget = budgetFor(day, settings, data?.totals ?? {});
+  const budget = budgetFor(day, settings, data?.totals ?? {}, today);
   const entries = data?.entries ?? [];
   const activities = data?.activities ?? [];
 
@@ -45,9 +47,9 @@ export function DayDashboard({ day }: { day: Day }) {
             <div className="stat-row">
               <Stat title="Eaten" value={Format.kcal(budget.calories.eaten)} />
               <span className="divider" />
-              <Stat title="Active" value={Format.signedKcal(budget.calories.activeBonus)} />
+              <Stat title="Active" value={Format.kcal(budget.active)} />
               <span className="divider" />
-              <Stat title="Budget" value={Format.kcal(budget.calories.total)} />
+              <Stat title={budget.plan?.restDay ? "Target · rest day" : "Target"} value={Format.kcal(budget.calories.total)} />
             </div>
             <div className="stack" style={{ gap: 14, width: "100%" }}>
               <MacroBar title="Protein" value={budget.eaten.protein} target={budget.targets.protein} />
@@ -57,10 +59,10 @@ export function DayDashboard({ day }: { day: Day }) {
           </div>
         </Section>
 
-        {budget.weekly && (
+        {budget.week && (
           <Section>
             <div style={{ padding: "12px 16px" }}>
-              <WeeklyBalanceView balance={budget.weekly} />
+              <WeekBudgetView week={budget.week} />
             </div>
           </Section>
         )}

@@ -59,7 +59,7 @@ export interface DayDTO {
   day: Day;
   entries: EntryDTO[];
   activities: ActivityDTO[];
-  /** Monday of the week up to and including `day` (for weekly mode). */
+  /** Per-day totals from `inputStart(day)` to the end of the week (weekly budget). */
   totals: Record<Day, DayTotals>;
 }
 

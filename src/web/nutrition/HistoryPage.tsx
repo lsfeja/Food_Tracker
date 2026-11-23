@@ -4,7 +4,7 @@ import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, XAxis, YAxis }
 import { addDays, weekStart } from "../../shared/days";
 import * as Format from "../../shared/format";
 import { dayStats, type DayStat, weekStats, type WeekStat } from "../../shared/historyStats";
-import { effectiveWeeklyLimit } from "../../shared/settings";
+import { inputStart } from "../../shared/weeklyBudget";
 import { useSettings, useTotals } from "../api/nutrition";
 import { BackButton, NavBar } from "../components/NavBar";
 import { Row, Section, Segmented, Spinner } from "../components/ui";
@@ -25,7 +25,8 @@ export function HistoryPage() {
   const earliestWeek = addDays(weekStart(today), -7 * (WEEK_COUNT - 1));
   const earliestDay = addDays(today, -LIST_DAYS);
   const from = earliestWeek < earliestDay ? earliestWeek : earliestDay;
-  const totals = useTotals(from, addDays(today, 1));
+  // The weekly budget needs history before the first shown day.
+  const totals = useTotals(inputStart(from), addDays(today, 1));
   const data = totals.data ?? {};
 
   const days = dayStats(today, LIST_DAYS, data, settings);
@@ -50,17 +51,17 @@ export function HistoryPage() {
                 <Spinner />
               </div>
             ) : scope === "days" ? (
-              <DayChart stats={days.slice(-CHART_DAYS)} target={settings.targets.kcal} />
+              <DayChart stats={days.slice(-CHART_DAYS)} target={(weeks[weeks.length - 1]?.plan ?? 0) / 7} />
             ) : (
-              <WeekChart stats={weeks} limit={effectiveWeeklyLimit(settings.budget, settings.targets.kcal)} />
+              <WeekChart stats={weeks} limit={weeks[weeks.length - 1]?.plan ?? 0} />
             )}
           </div>
         </Section>
         {scope === "days" ? (
           <Section header="Days">
-            {days.filter((d) => d.hasData).length === 0 && <div className="list-row secondary">No entries yet.</div>}
+            {days.filter((d) => d.hasData && !d.untracked).length === 0 && <div className="list-row secondary">No entries yet.</div>}
             {days
-              .filter((d) => d.hasData)
+              .filter((d) => d.hasData && !d.untracked)
               .reverse()
               .map((stat) => (
                 <Row key={stat.day} chevron onClick={() => navigate(`/day/${stat.day}`)}>

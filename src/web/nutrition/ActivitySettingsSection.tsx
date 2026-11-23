@@ -56,7 +56,7 @@ export function ActivitySettingsSection() {
   }, [backfill, actions.continueBackfill]);
 
   const footer =
-    "Activities and their calories from the last 14 days are imported as active calories on the day they happened. Syncs when the app opens, on pull to refresh and every 30 minutes in the background.";
+    "Activities and their calories from the last 4 weeks are imported as active calories on the day they happened. Syncs when the app opens, on pull to refresh and every 30 minutes in the background.";
 
   if (!data) {
     return (

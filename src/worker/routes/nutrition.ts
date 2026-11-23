@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { DayDTO } from "../../shared/api";
 import { addDays, weekStart } from "../../shared/days";
+import { inputStart } from "../../shared/weeklyBudget";
 import { barcodeVariants } from "../../shared/food";
 import { forAmount } from "../../shared/nutrients";
 import { activityFromRow, entryFromRow, foodFromRow, loadSettings, newId, totalsBetween } from "../db";
@@ -21,19 +22,21 @@ nutrition.put("/settings", async (c) => {
   const b = { ...current.budget, ...(body.budget ?? {}) };
   const timezone = typeof body.timezone === "string" && body.timezone ? body.timezone : current.timezone;
   const positive = (v: unknown, fallback: number) => (num(v, fallback) > 0 ? num(v, fallback) : fallback);
+  const within = (v: unknown, fallback: number, min: number, max: number) => Math.min(Math.max(num(v, fallback), min), max);
   await c.env.DB.prepare(
-    `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, weekly_mode = ?,
-       weekly_limit_kcal = ?, active_enabled = ?, active_percent = ?, timezone = ?, updated_at = ? WHERE user_id = ?`,
+    `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, active_enabled = ?, active_percent = ?,
+       rest_day_active_pct = ?, max_daily_deficit = ?, carry_over_pct = ?, timezone = ?, updated_at = ? WHERE user_id = ?`,
   )
     .bind(
       positive(t.kcal, current.targets.kcal),
       positive(t.protein, current.targets.protein),
       positive(t.carbs, current.targets.carbs),
       positive(t.fat, current.targets.fat),
-      b.weeklyModeEnabled ? 1 : 0,
-      Math.max(num(b.weeklyLimitKcal, 0), 0),
       b.activeCaloriesEnabled ? 1 : 0,
-      Math.min(Math.max(num(b.activeCaloriesPercent, 100), 50), 100),
+      within(b.activeCaloriesPercent, 100, 50, 100),
+      within(b.restDayActivePct, 75, 0, 100),
+      within(b.maxDailyDeficit, 700, 0, 2000),
+      within(b.carryOverPct, 70, 0, 100),
       timezone,
       Date.now(),
       userId,
@@ -56,7 +59,8 @@ nutrition.get("/day/:day", async (c) => {
     day,
     entries: ((entries.results ?? []) as Record<string, unknown>[]).map(entryFromRow),
     activities: ((activities.results ?? []) as Record<string, unknown>[]).map(activityFromRow),
-    totals: await totalsBetween(db, userId, weekStart(day), addDays(day, 1)),
+    // Weekly budget: the carry-over chain and the 4-week average reach back ~12 weeks.
+    totals: await totalsBetween(db, userId, inputStart(day), addDays(weekStart(day), 7)),
   };
   return c.json(result);
 });

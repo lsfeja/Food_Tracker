@@ -43,9 +43,9 @@ describe("token encryption", () => {
 });
 
 describe("sync window", () => {
-  it("covers 14 days back to Monday, with catch-up up to 60 days", () => {
-    expect(syncStartDay("2026-03-12")).toBe("2026-02-27");
-    expect(fetchStartDay("2026-03-12", null, "UTC")).toBe("2026-02-27");
+  it("covers 28 days back, with catch-up up to 60 days", () => {
+    expect(syncStartDay("2026-03-12")).toBe("2026-02-13");
+    expect(fetchStartDay("2026-03-12", null, "UTC")).toBe("2026-02-13");
     expect(fetchStartDay("2026-03-12", Date.UTC(2026, 1, 1), "UTC")).toBe("2026-01-30");
     expect(fetchStartDay("2026-03-12", Date.UTC(2025, 0, 1), "UTC")).toBe("2026-01-11");
   });

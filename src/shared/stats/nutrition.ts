@@ -1,4 +1,4 @@
-import { budgetFor, type DayTotals } from "../budget";
+import { budgetRange, type DayTotals } from "../budget";
 import { addDays, type Day } from "../days";
 import { addNutrients, type Nutrients, scaleNutrients, zeroNutrients } from "../nutrients";
 import type { NutritionTargets, UserSettings } from "../settings";
@@ -28,7 +28,10 @@ export const averageBucket = (kind: PeriodKind): Bucket => (kind === "week" ? "d
 
 const emptyBucket = (start: Day): NutritionBucket => ({ start, loggedDays: 0, eaten: zeroNutrients(), activeCalories: 0, average: zeroNutrients() });
 
-/** Only days with food entries count as logged; days after today are ignored. */
+/**
+ * Only days with food entries count as logged; days after today and vacation days are
+ * ignored. `totalsByDay` should reach back to `inputStart(interval start)` for budgets.
+ */
 export function nutritionReport(
   totalsByDay: Record<Day, DayTotals>,
   settings: UserSettings,
@@ -47,9 +50,11 @@ export function nutritionReport(
   let loggedDays = 0;
   let daysWithin = 0;
   let daysOver = 0;
+  const lastDay = addDays(interval.end < endOfToday ? interval.end : endOfToday, -1);
+  const budget = interval.start <= lastDay ? budgetRange(settings, totalsByDay, today, interval.start, lastDay) : null;
 
   for (const [day, totals] of Object.entries(totalsByDay)) {
-    if (!inInterval(day, interval) || day >= endOfToday) continue;
+    if (!inInterval(day, interval) || day >= endOfToday || totals.untracked) continue;
     const eStart = bucketStart(energyBucket, day);
     const e = energy.get(eStart) ?? emptyBucket(eStart);
     e.activeCalories += totals.activeCalories;
@@ -65,7 +70,8 @@ export function nutritionReport(
     a.loggedDays++;
     averages.set(aStart, a);
 
-    if (budgetFor(day, settings, totalsByDay).calories.isOver) daysOver++;
+    const plan = budget?.days[day];
+    if (plan && plan.remaining < 0) daysOver++;
     else daysWithin++;
   }
 

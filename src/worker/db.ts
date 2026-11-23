@@ -21,10 +21,11 @@ export function settingsFromRow(row: Row | null): UserSettings {
       fat: n(row?.target_fat ?? 70),
     },
     budget: {
-      weeklyModeEnabled: n(row?.weekly_mode) === 1,
-      weeklyLimitKcal: n(row?.weekly_limit_kcal ?? 0),
       activeCaloriesEnabled: n(row?.active_enabled ?? 1) === 1,
       activeCaloriesPercent: n(row?.active_percent ?? 100),
+      restDayActivePct: n(row?.rest_day_active_pct ?? 75),
+      maxDailyDeficit: n(row?.max_daily_deficit ?? 700),
+      carryOverPct: n(row?.carry_over_pct ?? 70),
     },
     timezone: String(row?.timezone ?? "Europe/Berlin"),
   };
@@ -109,15 +110,16 @@ export function sessionFromRow(r: Row): SessionDTO {
   };
 }
 
-/** Per-day eaten nutrients and active calories for [from, to). */
+/** Per-day eaten nutrients, active calories and planned rest days for [from, to). */
 export async function totalsBetween(db: D1Database, userId: string, from: Day, to: Day): Promise<Record<Day, DayTotals>> {
-  const [entries, activities] = await db.batch([
+  const [entries, activities, restDays] = await db.batch([
     db
       .prepare(
         "SELECT day, SUM(kcal) AS kcal, SUM(protein) AS protein, SUM(carbs) AS carbs, SUM(fat) AS fat FROM food_entries WHERE user_id = ? AND day >= ? AND day < ? GROUP BY day",
       )
       .bind(userId, from, to),
     db.prepare("SELECT day, SUM(active_kcal) AS active FROM activities WHERE user_id = ? AND day >= ? AND day < ? GROUP BY day").bind(userId, from, to),
+    db.prepare("SELECT DISTINCT day FROM planned_sessions WHERE user_id = ? AND sport = 'rest' AND day >= ? AND day < ?").bind(userId, from, to),
   ]);
   const result: Record<Day, DayTotals> = {};
   for (const r of (entries.results ?? []) as Row[]) {
@@ -127,6 +129,11 @@ export async function totalsBetween(db: D1Database, userId: string, from: Day, t
     const day = String(r.day);
     result[day] ??= { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 };
     result[day].activeCalories = n(r.active);
+  }
+  for (const r of (restDays.results ?? []) as Row[]) {
+    const day = String(r.day);
+    result[day] ??= { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 };
+    result[day].restDay = true;
   }
   return result;
 }

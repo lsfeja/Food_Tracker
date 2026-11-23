@@ -113,8 +113,14 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/add?mode=search|barcode|lab
   of `start_date_local`. The client syncs its time zone into `settings.timezone`.
 - `food_entries` store **absolute** nutrients (snapshot); editing a food never rewrites
   history. Foods are hidden, not deleted. `source` manual/barcode/label/ai, `is_estimated`.
-- Budget (`shared/budget.ts`): remaining = target + counted active − eaten; counted active =
-  Strava kcal × 50–100 %; weekly mode = rolling Monday-based allowance.
+- Budget (V3, `shared/weeklyBudget.ts`, pure, heavily tested): week plan = (base + A) × 7 +
+  slider, A = 4-week average of counted active kcal (Strava × 50–100 %). Activity above A
+  is added to that day and the rest of the week (at least 3 days, crossing into next week);
+  activity below A cuts the following days (rest days from the plan: from the day itself).
+  Food above/below a finished day's target moves to the following days and into the next
+  week. Limits: day ≥ max(base + 25 % A, base + A − max daily deficit), rest day ≥ base +
+  rest-day % of A; cuts that don't fit carry over by `carry_over_pct`. Days without entries
+  count as not logged. Computed on the client from `totals` reaching back `inputStart(day)`.
 - Workout payload (`shared/workout.ts`): `WorkoutDetails` union `strength | endurance |
   general`; parse leniently with `parseDetails/parseContent` (defaults for missing fields).
   `WorkoutContent` is copied by value (library → session, week → template);

@@ -10,15 +10,17 @@ describe("settings", () => {
     expect(initial.data.targets.kcal).toBe(2200);
     expect(initial.data.timezone).toBe("Europe/Berlin");
 
+    expect(initial.data.budget).toMatchObject({ restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70 });
+
     const updated = await call<UserSettings>("PUT", "/settings", {
       targets: { kcal: 2500 },
-      budget: { weeklyModeEnabled: true, weeklyLimitKcal: 16000, activeCaloriesPercent: 30 },
+      budget: { activeCaloriesPercent: 30, maxDailyDeficit: 500, carryOverPct: 150 },
     });
     expect(updated.data.targets.kcal).toBe(2500);
     expect(updated.data.targets.protein).toBe(140);
-    expect(updated.data.budget.weeklyModeEnabled).toBe(true);
-    expect(updated.data.budget.weeklyLimitKcal).toBe(16000);
     expect(updated.data.budget.activeCaloriesPercent).toBe(50); // clamped to 50–100
+    expect(updated.data.budget.maxDailyDeficit).toBe(500);
+    expect(updated.data.budget.carryOverPct).toBe(100); // clamped to 0–100
   });
 });
 
@@ -65,8 +67,10 @@ describe("foods and entries", () => {
     expect(edited.data.kcal).toBe(350);
     expect(edited.data.name).toBe("Snack");
 
+    await call("POST", "/sessions", { day: "2026-03-08", content: { sport: "rest", title: "", details: { kind: "general" } } });
     const day = await call<DayDTO>("GET", "/day/2026-03-10");
     expect(day.data.entries).toHaveLength(1);
+    expect(day.data.totals["2026-03-08"].restDay).toBe(true);
     expect(day.data.totals["2026-03-09"].eaten.kcal).toBe(800); // Monday of the same week
     expect(day.data.totals["2026-03-10"].eaten.kcal).toBe(350);
 

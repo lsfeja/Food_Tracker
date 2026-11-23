@@ -13,7 +13,12 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 ## Funktionen
 
 **Ernährung**
-- Tagesübersicht: Ring mit verbleibenden kcal (Ziel + aktive kcal − gegessen), Makro-Balken,
+- **Wochenbudget** (V3): Wochenplan = (Grundumsatz + Ø Aktivkalorien der letzten 4 Wochen) × 7.
+  Mehr Training als im Schnitt füllt den Rest der Woche auf (mindestens 3 Tage), weniger kürzt
+  die Folgetage; Ruhetage aus dem Plan sind geschützt, die Tage haben eine Untergrenze (max.
+  Defizit pro Tag einstellbar). Gegessenes über/unter dem Tagesziel wandert auf die Folgetage und
+  in die nächste Woche; nicht unterzubringende Kürzungen nur anteilig (Standard 70 %).
+- Tagesübersicht: Ring mit verbleibenden kcal des Tagesziels, Wochenkarte, Makro-Balken,
   Einträge (wischen zum Bearbeiten/Löschen), großer **+**-Button (gedrückt halten → Scan/Etikett).
 - Hinzufügen: zuletzt/häufig verwendete und eigene Lebensmittel, Suche in Open Food Facts,
   Menge in Gramm (Nährwerte pro 100 g werden skaliert), neue Lebensmittel, Schnelleintrag.
@@ -21,7 +26,7 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
   Produkte → Etikett fotografieren oder manuell erfassen.
 - **Etikett-Foto**: Texterkennung im Browser (Tesseract.js, Deutsch/Englisch) liest die
   Werte pro 100 g; du bestätigst sie im Editor.
-- Tagesziele, optionales **Wochenbudget** mit Übertrag, Anteil der aktiven Kalorien (50–100 %).
+- Grundumsatz (Ruhe + Alltagsbewegung), Makroziele, Anteil der aktiven Kalorien (50–100 %).
 - Verlauf: Tage und Wochen mit Diagrammen; jeder Tag lässt sich öffnen und nachtragen.
 
 **Plan**
