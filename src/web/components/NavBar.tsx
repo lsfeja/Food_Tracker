@@ -13,6 +13,7 @@ export function NavBar({
   trailing,
   inSheet,
   flat,
+  bottom,
 }: {
   title: ReactNode;
   large?: boolean;
@@ -20,6 +21,8 @@ export function NavBar({
   trailing?: ReactNode;
   inSheet?: boolean;
   flat?: boolean;
+  /** Extra content pinned under the bar (e.g. the Plan week strip). */
+  bottom?: ReactNode;
 }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -40,6 +43,7 @@ export function NavBar({
           <div className="navbar-title">{title}</div>
           <div className="navbar-trailing">{trailing}</div>
         </div>
+        {bottom}
       </header>
       {large && !inSheet && <h1 className="large-title">{title}</h1>}
     </>

@@ -14,7 +14,18 @@ let closeOpenRow: (() => void) | null = null;
  * Row with trailing swipe actions (iOS `swipeActions`). A full swipe triggers the first
  * action when `fullSwipe` is set. Taps pass through to the content.
  */
-export function SwipeRow({ actions, children, fullSwipe }: { actions: SwipeAction[]; children: ReactNode; fullSwipe?: boolean }) {
+export function SwipeRow({
+  actions,
+  children,
+  fullSwipe,
+  disabled,
+}: {
+  actions: SwipeAction[];
+  children: ReactNode;
+  fullSwipe?: boolean;
+  /** Ignore gestures (e.g. while the row is being dragged). */
+  disabled?: boolean;
+}) {
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -47,6 +58,10 @@ export function SwipeRow({ actions, children, fullSwipe }: { actions: SwipeActio
   const onPointerMove = (event: React.PointerEvent) => {
     const g = gesture.current;
     if (!g || g.id !== event.pointerId) return;
+    if (disabled) {
+      gesture.current = null;
+      return;
+    }
     const dx = event.clientX - g.x;
     const dy = event.clientY - g.y;
     if (g.axis === null) {

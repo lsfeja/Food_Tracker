@@ -11,7 +11,10 @@ import type { AddFoodMode } from "./nutrition/add/flow";
 import { HistoryPage } from "./nutrition/HistoryPage";
 import { DayPage, NutritionHome } from "./nutrition/NutritionHome";
 import { SettingsPage } from "./nutrition/SettingsPage";
+import { LibraryPage } from "./plan/LibraryPage";
 import { PlanPage } from "./plan/PlanPage";
+import { SessionDetailPage } from "./plan/SessionDetailPage";
+import { WeekTemplateEditorPage, WeekTemplatesPage } from "./plan/WeekTemplatesPage";
 import { StatsPage } from "./stats/StatsPage";
 
 function Layout() {
@@ -70,6 +73,10 @@ const router = createBrowserRouter([
       { path: "/settings", element: <SettingsPage /> },
       { path: "/add", element: <AddRoute /> },
       { path: "/plan", element: <PlanPage /> },
+      { path: "/plan/session/:id", element: <SessionDetailPage /> },
+      { path: "/plan/library", element: <LibraryPage /> },
+      { path: "/plan/templates", element: <WeekTemplatesPage /> },
+      { path: "/plan/templates/:id", element: <WeekTemplateEditorPage /> },
       { path: "/stats", element: <StatsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
