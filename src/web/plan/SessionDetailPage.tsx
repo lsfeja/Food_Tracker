@@ -181,7 +181,9 @@ function SessionDetail({ data }: { data: NonNullable<ReturnType<typeof useSessio
                 <span className="grow">
                   {record.exercise} <span className="secondary">· {recordTitle(record.kind)}</span>
                 </span>
-                <span className="semibold tabular">{Format.weight(record.value)} kg</span>
+                <span className="semibold tabular">
+                  {record.kind === "oneRepMax" ? `~${Format.weight(Math.round(record.value * 2) / 2)}` : Format.weight(record.value)} kg
+                </span>
               </div>
             ))}
           </Section>

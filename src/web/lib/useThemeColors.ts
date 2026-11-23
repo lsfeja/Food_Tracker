@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 /** Resolved theme colors for SVG charts (CSS variables can't be used everywhere). */
 export interface ThemeColors {
+  dark: boolean;
   accent: string;
   orange: string;
   blue: string;
@@ -22,6 +23,7 @@ function read(): ThemeColors {
   const style = getComputedStyle(document.documentElement);
   const v = (name: string) => style.getPropertyValue(name).trim();
   const colors = {
+    dark,
     accent: v("--accent"),
     orange: v("--orange"),
     blue: v("--blue"),

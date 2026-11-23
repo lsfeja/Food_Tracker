@@ -125,3 +125,24 @@ export interface StravaStatusDTO {
   lastError: string | null;
   backfill: BackfillDTO;
 }
+
+/** Stats tab snapshots (reports are computed on the client). */
+export interface StatsActivityDTO {
+  key: string;
+  name: string;
+  startAt: number;
+  day: string;
+  type: string;
+  isIndoor: boolean;
+  distanceM: number;
+  movingS: number;
+  elevationM: number;
+}
+
+export interface StatsSessionDTO {
+  day: string;
+  sport: SportType;
+  status: SessionStatus;
+  plannedMinutes: number | null;
+  linkedActivityKey: string | null;
+}

@@ -1548,3 +1548,103 @@ input[type="range"] {
 .list-row.tertiary {
   color: var(--label-3);
 }
+
+/* MARK: Stats */
+
+.stats-card {
+  margin: 0 var(--gutter) 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.stats-card-header svg {
+  color: var(--accent);
+  align-self: center;
+  flex: none;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+.metric-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metric-tile .value {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--label-2);
+}
+
+.legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.record-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.record-row + .record-row {
+  padding-top: 10px;
+  border-top: 0.5px solid var(--separator);
+}
+
+.stats-controls {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chips.compact .chip {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.segmented.mini {
+  width: 92px;
+}
+
+.segmented.mini button {
+  height: 24px;
+  font-size: 12px;
+}

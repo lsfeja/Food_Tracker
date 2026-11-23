@@ -1,5 +1,5 @@
 import { CloudOff } from "lucide-react";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, ScrollRestoration, useNavigate, useSearchParams } from "react-router-dom";
 import { isDay } from "../shared/days";
 import { useActivitySync, useStravaStatus } from "./api/activity";
@@ -9,14 +9,19 @@ import { ToastProvider } from "./components/Toast";
 import { useOnline } from "./lib/useOnline";
 import { AddFoodProvider, useAddFood } from "./nutrition/add/AddFoodContext";
 import type { AddFoodMode } from "./nutrition/add/flow";
-import { HistoryPage } from "./nutrition/HistoryPage";
 import { DayPage, NutritionHome } from "./nutrition/NutritionHome";
 import { SettingsPage } from "./nutrition/SettingsPage";
 import { LibraryPage } from "./plan/LibraryPage";
 import { PlanPage } from "./plan/PlanPage";
 import { SessionDetailPage } from "./plan/SessionDetailPage";
 import { WeekTemplateEditorPage, WeekTemplatesPage } from "./plan/WeekTemplatesPage";
-import { StatsPage } from "./stats/StatsPage";
+import { Spinner } from "./components/ui";
+
+// Chart-heavy screens are loaded on demand.
+const HistoryPage = lazy(() => import("./nutrition/HistoryPage").then((m) => ({ default: m.HistoryPage })));
+const StatsPage = lazy(() => import("./stats/StatsPage"));
+const ExerciseListPage = lazy(() => import("./stats/StrengthSection").then((m) => ({ default: m.ExerciseListPage })));
+const ExerciseDetailPage = lazy(() => import("./stats/StrengthSection").then((m) => ({ default: m.ExerciseDetailPage })));
 
 function Layout() {
   const online = useOnline();
@@ -31,7 +36,15 @@ function Layout() {
               <CloudOff size={14} /> Offline – showing saved data
             </div>
           )}
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="empty-state" style={{ paddingTop: "calc(80px + var(--safe-top))" }}>
+                <Spinner />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
         <TabBar />
         <ScrollRestoration getKey={(location) => location.pathname} />
@@ -94,6 +107,8 @@ const router = createBrowserRouter([
       { path: "/plan/templates", element: <WeekTemplatesPage /> },
       { path: "/plan/templates/:id", element: <WeekTemplateEditorPage /> },
       { path: "/stats", element: <StatsPage /> },
+      { path: "/stats/exercises", element: <ExerciseListPage /> },
+      { path: "/stats/exercise/:key", element: <ExerciseDetailPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
