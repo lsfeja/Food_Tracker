@@ -15,6 +15,7 @@ import {
   resettingProgress,
   sportFromActivityType,
   structureSummary,
+  type WorkoutContent,
   type WorkoutDetails,
 } from "./workout";
 
@@ -74,7 +75,7 @@ describe("workout details", () => {
   });
 
   it("adapts details when the sport changes", () => {
-    let content = { ...newContent("yoga"), details: { kind: "general" as const, durationMinutes: 45, notes: "Flow" } };
+    let content: WorkoutContent = { ...newContent("yoga"), details: { kind: "general", durationMinutes: 45, notes: "Flow" } };
     content = changeSport(content, "run");
     expect(content.details).toMatchObject({ kind: "endurance", durationMinutes: 45, notes: "Flow" });
     expect(changeSport(content, "ride").details.kind).toBe("endurance");
