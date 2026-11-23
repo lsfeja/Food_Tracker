@@ -262,6 +262,18 @@ describe("nutrition stats", () => {
     expect(r.energy[2].activeCalories).toBe(300);
   });
 
+  it("skips vacation days", () => {
+    const r = nutritionReport(
+      { "2025-11-17": t(1800), "2025-11-18": { ...t(4000), untracked: true } },
+      settings,
+      { kind: "week", year: 2025 },
+      today,
+    );
+    expect(r.loggedDays).toBe(1);
+    expect(r.average.kcal).toBe(1800);
+    expect(r.daysOver).toBe(0);
+  });
+
   it("uses weekly averages for a month", () => {
     const r = nutritionReport({ "2025-11-03": t(2500), "2025-11-04": t(1500) }, settings, { kind: "month", year: 2025 }, today);
     expect(r.bucket).toBe("week");

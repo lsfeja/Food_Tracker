@@ -109,4 +109,19 @@ describe("foods and entries", () => {
     const totals = await a<Record<string, unknown>>("GET", "/totals?from=2026-03-01&to=2026-04-01");
     expect(Object.keys(totals.data)).toEqual(["2026-03-10"]);
   });
+
+  it("marks vacation days that are flagged in the totals", async () => {
+    const call = api("vacation@example.com");
+    expect((await call("PUT", "/untracked-days/2026-12-24")).status).toBe(204);
+    await call("PUT", "/untracked-days/2026-12-25");
+    await call("PUT", "/untracked-days/2026-12-25"); // idempotent
+    expect((await call<string[]>("GET", "/untracked-days")).data).toEqual(["2026-12-24", "2026-12-25"]);
+    const day = await call<DayDTO>("GET", "/day/2026-12-24");
+    expect(day.data.totals["2026-12-24"].untracked).toBe(true);
+    await call("DELETE", "/untracked-days/2026-12-24");
+    expect((await call<string[]>("GET", "/untracked-days")).data).toEqual(["2026-12-25"]);
+    expect((await call("PUT", "/untracked-days/24.12.2026")).status).toBe(400);
+    // Other users don't see them.
+    expect((await api("other@example.com")<string[]>("GET", "/untracked-days")).data).toEqual([]);
+  });
 });

@@ -3,7 +3,11 @@ import { kcalFromMacros } from "../../shared/nutrients";
 import { budgetFor } from "../../shared/budget";
 import { addDays, weekStart } from "../../shared/days";
 import { inputStart, type WeekSummary } from "../../shared/weeklyBudget";
-import { useMe, useSettings, useTotals, useUpdateSettings } from "../api/nutrition";
+import { Palmtree, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useMe, useSetUntracked, useSettings, useTotals, useUntrackedDays, useUpdateSettings } from "../api/nutrition";
+import { SwipeRow } from "../components/SwipeRow";
+import { formatDay } from "../lib/dates";
 import { useToday } from "../lib/useToday";
 import { BackButton, NavBar } from "../components/NavBar";
 import { LabeledRow, NumberSetting, Section, ToggleRow } from "../components/ui";
@@ -34,6 +38,8 @@ export function SettingsPage() {
         <GoalSection week={week} />
 
         <WeeklyBudgetSection week={week} />
+
+        <VacationSection />
 
         <ActivitySettingsSection />
 
@@ -169,6 +175,53 @@ function WeeklyBudgetSection({ week }: { week: WeekSummary | null }) {
         value={budget.carryOverPct}
         onChange={(carryOverPct) => update({ budget: { carryOverPct: Math.min(carryOverPct, 100) } })}
       />
+    </Section>
+  );
+}
+
+/** Vacation days: not tracked (no budget, no balance, not in the average). */
+function VacationSection() {
+  const days = useUntrackedDays();
+  const setUntracked = useSetUntracked();
+  const today = useToday();
+  const [adding, setAdding] = useState("");
+  const list = days.data ?? [];
+  const upcoming = list.filter((d) => d >= today);
+  const recent = list.filter((d) => d < today && d >= addDays(today, -30)).reverse();
+  const row = (day: string) => (
+    <SwipeRow key={day} fullSwipe actions={[{ label: "Remove", icon: <Trash2 size={18} />, color: "red", onSelect: () => setUntracked.mutate({ day, untracked: false }) }]}>
+      <div className="list-row">
+        <Palmtree size={18} className="accent" />
+        <span className="grow">{formatDay(day, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+        {day === today && <span className="footnote secondary">today</span>}
+      </div>
+    </SwipeRow>
+  );
+  return (
+    <Section
+      header="Vacation Days"
+      footer="Days marked here (or with the switch on a day) aren't tracked: no budget, no balance and they don't count in the 4-week average. Strava activities still count in the stats. Swipe to remove."
+    >
+      {upcoming.map(row)}
+      {recent.map(row)}
+      <label className="list-row field-row compact">
+        <span className="field-label action" style={{ color: "var(--accent)" }}>
+          Add day
+        </span>
+        <input
+          type="date"
+          value={adding}
+          aria-label="Add vacation day"
+          onChange={(event) => {
+            const value = event.target.value;
+            setAdding(value);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+              setUntracked.mutate({ day: value, untracked: true });
+              setAdding("");
+            }
+          }}
+        />
+      </label>
     </Section>
   );
 }

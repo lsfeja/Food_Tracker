@@ -27,6 +27,9 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 - **Etikett-Foto**: Texterkennung im Browser (Tesseract.js, Deutsch/Englisch) liest die
   Werte pro 100 g; du bestätigst sie im Editor.
 - Grundumsatz (Ruhe + Alltagsbewegung), Makroziele, Anteil der aktiven Kalorien (50–100 %).
+- **Urlaubstage**: einzelne Tage als „nicht getrackt“ markieren (auch im Voraus, in den
+  Einstellungen oder per Schalter am Tag): kein Budget, keine Bilanz, nicht im 4-Wochen-Schnitt;
+  Strava-Aktivitäten zählen trotzdem in der Sportstatistik.
 - **Ziel-Slider**: Defizit (Fett reduzieren) oder Überschuss (Masse aufbauen) in kcal/Tag; das
   Defizit ist durch die Untergrenze des Wochenbudgets begrenzt, der Überschuss auf +750.
 - Verlauf: Tage und Wochen mit Diagrammen; jeder Tag lässt sich öffnen und nachtragen.
@@ -232,6 +235,7 @@ Schnellzugriffe: `https://<domain>/add?mode=barcode` (Scanner) oder `…/add?mod
 | `planned_sessions` | Trainingseinheiten (Tag, Reihenfolge, Sport, Status, Details als JSON, Strava-Verknüpfung) |
 | `workout_templates`, `week_templates` | Bibliothek und Wochenvorlagen |
 | `yearly_goals` | Jahresziele (km/Stunden) pro Sport-Filter |
+| `untracked_days` | Urlaubstage (nicht getrackt) |
 | `backfill_state`, `rate_limits`, `oauth_states` | Historien-Import, API-Limits pro Anbieter, OAuth-State |
 
 ## Projektstruktur

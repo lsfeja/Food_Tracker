@@ -1,17 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Barcode, Pencil, Plus, ScanText, Trash2, Utensils } from "lucide-react";
+import { Barcode, Palmtree, Pencil, Plus, ScanText, Trash2, Utensils } from "lucide-react";
 import { useRef, useState } from "react";
 import type { EntryDTO } from "../../shared/api";
 import { budgetFor } from "../../shared/budget";
 import type { Day } from "../../shared/days";
 import * as Format from "../../shared/format";
 import { errorMessage } from "../api/client";
-import { invalidateNutrition, useDay, useDeleteEntry, useSettings } from "../api/nutrition";
+import { invalidateNutrition, useDay, useDeleteEntry, useSetUntracked, useSettings } from "../api/nutrition";
 import { useActivitySync } from "../api/activity";
 import { PullToRefresh } from "../components/PullToRefresh";
 import { ActionSheet } from "../components/Sheet";
 import { SwipeRow } from "../components/SwipeRow";
-import { EmptyState, Row, Section, Spinner } from "../components/ui";
+import { EmptyState, Row, Section, Spinner, ToggleRow } from "../components/ui";
 import { useAddFood } from "./add/AddFoodContext";
 import { useToday } from "../lib/useToday";
 import { ActivityRowContent, CalorieRing, EntryRowContent, MacroBar, WeekBudgetView } from "./DayWidgets";
@@ -25,11 +25,13 @@ export function DayDashboard({ day }: { day: Day }) {
   const client = useQueryClient();
   const sync = useActivitySync();
   const remove = useDeleteEntry();
+  const setUntracked = useSetUntracked();
   const [editing, setEditing] = useState<EntryDTO | null>(null);
 
   const data = query.data;
   const budget = budgetFor(day, settings, data?.totals ?? {}, today);
   const entries = data?.entries ?? [];
+  const untracked = Boolean(data?.totals[day]?.untracked);
   const activities = data?.activities ?? [];
 
   const refresh = async () => {
@@ -41,6 +43,15 @@ export function DayDashboard({ day }: { day: Day }) {
   return (
     <PullToRefresh onRefresh={refresh}>
       <div className="page-content">
+        {untracked ? (
+          <Section>
+            <div className="empty-state" style={{ padding: "28px 16px" }}>
+              <Palmtree size={30} className="accent" />
+              <span className="headline">Not tracked</span>
+              <span className="footnote secondary">This day doesn't count for your budget (vacation). Activities still count in the stats.</span>
+            </div>
+          </Section>
+        ) : (
         <Section>
           <div className="stack" style={{ alignItems: "center", gap: 24, padding: "20px 16px" }}>
             <CalorieRing budget={budget.calories} />
@@ -58,6 +69,7 @@ export function DayDashboard({ day }: { day: Day }) {
             </div>
           </div>
         </Section>
+        )}
 
         {budget.week && (
           <Section>
@@ -108,6 +120,9 @@ export function DayDashboard({ day }: { day: Day }) {
             ))}
           </Section>
         )}
+        <Section footer="Vacation days don't count for your weekly budget or the active average. You can mark future days in Settings.">
+          <ToggleRow label="Don't track this day (vacation)" checked={untracked} onChange={(value) => setUntracked.mutate({ day, untracked: value })} />
+        </Section>
         <div className="fab-spacer" />
       </div>
       <AddFoodButton day={day} />

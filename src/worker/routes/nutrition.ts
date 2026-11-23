@@ -67,6 +67,25 @@ nutrition.get("/day/:day", async (c) => {
   return c.json(result);
 });
 
+// MARK: Vacation days (not tracked)
+
+nutrition.get("/untracked-days", async (c) => {
+  const rows = await c.env.DB.prepare("SELECT day FROM untracked_days WHERE user_id = ? ORDER BY day").bind(c.get("userId")).all<{ day: string }>();
+  return c.json((rows.results ?? []).map((r) => r.day));
+});
+
+nutrition.put("/untracked-days/:day", async (c) => {
+  const day = requireDay(c.req.param("day"));
+  await c.env.DB.prepare("INSERT OR IGNORE INTO untracked_days (user_id, day, created_at) VALUES (?, ?, ?)").bind(c.get("userId"), day, Date.now()).run();
+  return c.body(null, 204);
+});
+
+nutrition.delete("/untracked-days/:day", async (c) => {
+  const day = requireDay(c.req.param("day"));
+  await c.env.DB.prepare("DELETE FROM untracked_days WHERE user_id = ? AND day = ?").bind(c.get("userId"), day).run();
+  return c.body(null, 204);
+});
+
 nutrition.get("/totals", async (c) => {
   const from = requireDay(c.req.query("from"), "from");
   const to = requireDay(c.req.query("to"), "to");

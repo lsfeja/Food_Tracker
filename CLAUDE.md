@@ -121,6 +121,8 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/add?mode=search|barcode|lab
   week. Limits: day ≥ max(base + 25 % A, base + A − max daily deficit), rest day ≥ base +
   rest-day % of A; cuts that don't fit carry over by `carry_over_pct`. Days without entries
   count as not logged. Computed on the client from `totals` reaching back `inputStart(day)`.
+- Vacation days (`untracked_days`, flag `untracked` in `totals`) are skipped by the budget,
+  the active average and nutrition stats; activities on them still count for sport stats.
 - Workout payload (`shared/workout.ts`): `WorkoutDetails` union `strength | endurance |
   general`; parse leniently with `parseDetails/parseContent` (defaults for missing fields).
   `WorkoutContent` is copied by value (library → session, week → template);

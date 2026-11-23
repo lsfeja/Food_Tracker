@@ -111,9 +111,9 @@ export function sessionFromRow(r: Row): SessionDTO {
   };
 }
 
-/** Per-day eaten nutrients, active calories and planned rest days for [from, to). */
+/** Per-day eaten nutrients, active calories, planned rest days and vacation days for [from, to). */
 export async function totalsBetween(db: D1Database, userId: string, from: Day, to: Day): Promise<Record<Day, DayTotals>> {
-  const [entries, activities, restDays] = await db.batch([
+  const [entries, activities, restDays, untracked] = await db.batch([
     db
       .prepare(
         "SELECT day, SUM(kcal) AS kcal, SUM(protein) AS protein, SUM(carbs) AS carbs, SUM(fat) AS fat FROM food_entries WHERE user_id = ? AND day >= ? AND day < ? GROUP BY day",
@@ -121,6 +121,7 @@ export async function totalsBetween(db: D1Database, userId: string, from: Day, t
       .bind(userId, from, to),
     db.prepare("SELECT day, SUM(active_kcal) AS active FROM activities WHERE user_id = ? AND day >= ? AND day < ? GROUP BY day").bind(userId, from, to),
     db.prepare("SELECT DISTINCT day FROM planned_sessions WHERE user_id = ? AND sport = 'rest' AND day >= ? AND day < ?").bind(userId, from, to),
+    db.prepare("SELECT day FROM untracked_days WHERE user_id = ? AND day >= ? AND day < ?").bind(userId, from, to),
   ]);
   const result: Record<Day, DayTotals> = {};
   for (const r of (entries.results ?? []) as Row[]) {
@@ -135,6 +136,11 @@ export async function totalsBetween(db: D1Database, userId: string, from: Day, t
     const day = String(r.day);
     result[day] ??= { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 };
     result[day].restDay = true;
+  }
+  for (const r of (untracked.results ?? []) as Row[]) {
+    const day = String(r.day);
+    result[day] ??= { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 };
+    result[day].untracked = true;
   }
   return result;
 }

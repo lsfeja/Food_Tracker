@@ -14,6 +14,7 @@ export const keys = {
   day: (day: Day) => ["day", day] as const,
   foods: ["foods"] as const,
   totals: (from: Day, to: Day) => ["totals", from, to] as const,
+  untracked: ["untracked"] as const,
 };
 
 /** Everything derived from entries or activities. */
@@ -196,3 +197,31 @@ export const offApi = {
   search: (query: string) => api.get<FoodDraft[]>(`/off/search?q=${encodeURIComponent(query)}`),
   localByBarcode: (barcode: string) => api.get<FoodDTO | null>(`/foods/barcode/${encodeURIComponent(barcode)}`),
 };
+
+// MARK: Vacation days
+
+export const useUntrackedDays = () => useQuery({ queryKey: keys.untracked, queryFn: () => api.get<Day[]>("/untracked-days") });
+
+/** Marks a day as not tracked (vacation) or tracks it again. */
+export function useSetUntracked() {
+  const client = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ day, untracked }: { day: Day; untracked: boolean }) =>
+      untracked ? api.put(`/untracked-days/${day}`, {}) : api.delete(`/untracked-days/${day}`),
+    onMutate: ({ day, untracked }) => {
+      client.setQueryData<Day[]>(keys.untracked, (list) => (list ? (untracked ? [...new Set([...list, day])].sort() : list.filter((d) => d !== day)) : list));
+      client.setQueriesData<DayDTO>({ queryKey: ["day"] }, (dto) => {
+        if (!dto) return dto;
+        const current = dto.totals[day] ?? { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 };
+        return { ...dto, totals: { ...dto.totals, [day]: { ...current, untracked } } };
+      });
+    },
+    onError: (error) => toast(errorMessage(error)),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: keys.untracked });
+      invalidateNutrition(client);
+      void client.invalidateQueries({ queryKey: ["stats"] });
+    },
+  });
+}

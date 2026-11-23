@@ -59,9 +59,9 @@ export function HistoryPage() {
         </Section>
         {scope === "days" ? (
           <Section header="Days">
-            {days.filter((d) => d.hasData && !d.untracked).length === 0 && <div className="list-row secondary">No entries yet.</div>}
+            {days.filter((d) => d.hasData || d.untracked).length === 0 && <div className="list-row secondary">No entries yet.</div>}
             {days
-              .filter((d) => d.hasData && !d.untracked)
+              .filter((d) => d.hasData || d.untracked)
               .reverse()
               .map((stat) => (
                 <Row key={stat.day} chevron onClick={() => navigate(`/day/${stat.day}`)}>
@@ -71,7 +71,7 @@ export function HistoryPage() {
                       P {Format.grams(stat.eaten.protein)} · C {Format.grams(stat.eaten.carbs)} · F {Format.grams(stat.eaten.fat)}
                     </span>
                   </div>
-                  <Totals eaten={stat.eaten.kcal} budget={stat.budget} />
+                  {stat.untracked ? <span className="footnote secondary">Not tracked</span> : <Totals eaten={stat.eaten.kcal} budget={stat.budget} />}
                 </Row>
               ))}
           </Section>
@@ -128,7 +128,7 @@ function DayChart({ stats, target }: { stats: DayStat[]; target: number }) {
   const colors = useThemeColors();
   return (
     <>
-      <Average value={average(stats.map((s) => s.eaten.kcal))} unit="day" />
+      <Average value={average(stats.filter((s) => !s.untracked).map((s) => s.eaten.kcal))} unit="day" />
       <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={stats.map((s) => ({ day: s.day, kcal: s.eaten.kcal, over: s.eaten.kcal > s.budget }))} margin={{ top: 6, right: 0, bottom: 0, left: 0 }}>
@@ -136,7 +136,7 @@ function DayChart({ stats, target }: { stats: DayStat[]; target: number }) {
             <YAxis orientation="right" tickLine={false} axisLine={false} width={40} tick={{ fill: colors.label2, fontSize: 11 }} tickFormatter={(v: number) => Format.kcal(v)} />
             <Bar dataKey="kcal" radius={[4, 4, 0, 0]} isAnimationActive={false}>
               {stats.map((s) => (
-                <Cell key={s.day} fill={s.eaten.kcal > s.budget ? colors.orange : colors.accent} />
+                <Cell key={s.day} fill={s.untracked ? colors.label3 : s.eaten.kcal > s.budget ? colors.orange : colors.accent} />
               ))}
             </Bar>
             <ReferenceLine y={target} stroke={colors.label2} strokeDasharray="4 4" />
