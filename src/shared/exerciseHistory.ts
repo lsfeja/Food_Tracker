@@ -1,6 +1,6 @@
 import type { Day } from "./days";
-import { weight as fmtWeight } from "./format";
-import { type ExerciseSet, performedReps, performedWeight, type StrengthDetails } from "./workout";
+import { seconds as fmtSeconds, weight as fmtWeight } from "./format";
+import { type ExerciseKind, type ExerciseSet, performedReps, performedSeconds, performedWeight, type StrengthDetails } from "./workout";
 
 export interface ExerciseRecord {
   sessionId: string;
@@ -34,7 +34,7 @@ export function lastPerformance(name: string, day: Day, excludedSessionId: strin
     for (const exercise of record.workout.exercises) {
       if (normalizedName(exercise.name) !== key) continue;
       const done = exercise.sets.filter((set) => set.isDone);
-      if (done.length) return { day: record.day, sets: done, summary: setsSummary(done) };
+      if (done.length) return { day: record.day, sets: done, summary: setsSummary(done, exercise.kind) };
     }
   }
   return null;
@@ -56,9 +56,10 @@ export function knownNames(records: ExerciseRecord[]): string[] {
   return names;
 }
 
-/** "3 × 8 @ 80 kg", "8 @ 80 · 6 @ 82.5 kg", "3 × 12" */
-export function setsSummary(sets: ExerciseSet[]): string {
+/** "3 × 8 @ 80 kg", "8 @ 80 · 6 @ 82.5 kg", "3 × 12"; time: "3 × 45 s", "45 s · 1:00 min @ 10 kg" */
+export function setsSummary(sets: ExerciseSet[], kind: ExerciseKind = "reps"): string {
   if (!sets.length) return "";
+  if (kind === "time") return timeSummary(sets);
   const reps = sets.map(performedReps);
   const weights = sets.map(performedWeight);
   const repsText = (value: number | null) => (value === null ? "–" : String(value));
@@ -73,4 +74,21 @@ export function setsSummary(sets: ExerciseSet[]): string {
     return w !== null ? `${repsText(performedReps(set))} @ ${fmtWeight(w)}` : repsText(performedReps(set));
   });
   return parts.join(" · ") + (weights.some((w) => w !== null) ? " kg" : "");
+}
+
+function timeSummary(sets: ExerciseSet[]): string {
+  const durations = sets.map(performedSeconds);
+  const weights = sets.map(performedWeight);
+  const text = (value: number | null) => (value === null ? "–" : fmtSeconds(value));
+  const sameDuration = new Set(durations.map((d) => d ?? -1)).size === 1;
+  const sameWeight = new Set(weights.map((w) => w ?? -1)).size === 1;
+  if (sameDuration && sameWeight) {
+    const base = `${sets.length} × ${text(durations[0])}`;
+    return weights[0] !== null ? `${base} @ ${fmtWeight(weights[0])} kg` : base;
+  }
+  const parts = sets.map((set) => {
+    const w = performedWeight(set);
+    return w !== null ? `${text(performedSeconds(set))} @ ${fmtWeight(w)} kg` : text(performedSeconds(set));
+  });
+  return parts.join(" · ");
 }

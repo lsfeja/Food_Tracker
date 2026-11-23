@@ -126,6 +126,9 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/add?mode=search|barcode|lab
 - Sports (`SPORTS`/`sportInfo` in `shared/workout.ts`): `race` is plannable with general
   details for now; race-specific details (discipline, distance, target time, budget effect)
   are planned as their own `WorkoutDetails` kind.
+- Exercises have `kind: "reps" | "time"`; time sets use `plannedSeconds`/`actualSeconds`
+  (optional weight). The parser defaults stored exercises without a kind to `"reps"`. Time
+  exercises don't count for 1RM/volume; their record is `longest`.
 - Workout payload (`shared/workout.ts`): `WorkoutDetails` union `strength | endurance |
   general`; parse leniently with `parseDetails/parseContent` (defaults for missing fields).
   `WorkoutContent` is copied by value (library → session, week → template);

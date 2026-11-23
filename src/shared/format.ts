@@ -45,6 +45,13 @@ export function duration(minutes: number): string {
   return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
 
+/** Set duration: "45 s", "1:30 min" */
+export function seconds(value: number): string {
+  const total = Math.round(value);
+  if (total < 60) return `${total} s`;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")} min`;
+}
+
 /** Interval step: "4′", "2.5′", "30″" */
 export function shortMinutes(minutes: number): string {
   if (minutes < 1) return `${Math.round(minutes * 60)}″`;

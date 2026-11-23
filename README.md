@@ -38,7 +38,8 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 - Trainingskalender als To-do-Liste pro Woche (Woche/Tag), heute hervorgehoben, Wochenleiste
   zum Wischen, **+** pro Tag, Abhaken, Wischen zum Löschen/Duplizieren,
   **Drag & Drop** (lange drücken) zwischen Tagen.
-- Details je Sportart: Kraft (Sätze × Wdh. × Gewicht, Ist-Werte, „letztes Mal“,
+- Details je Sportart: Kraft (pro Übung **Wiederholungen + Gewicht** oder **Zeit** pro Satz,
+  optional mit Gewicht, z. B. Plank, Wall Sit, Farmer's Walk; Ist-Werte, „letztes Mal“,
   Pausentimer, neue Bestwerte), Ausdauer (Dauer, Distanz, Zonen/RPE, Intervalle),
   Mobility/Yoga/Ruhetag/Eigene (Notizen, Dauer), **Race** (Wettkampf, vorerst nur planbar). Krafttraining bleibt in der App
   (kein Upload zu Strava).
@@ -51,7 +52,8 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 - Zeitraum Woche/Monat/Jahr/Gesamt, Jahresauswahl.
 - Ausdauer (pro Sportart oder Rad gesamt): km, Zeit, Höhenmeter, Wochen-/Monatsvolumen,
   Jahr vs. Vorjahr, Rekorde, Indoor-Anteil, **Jahresziele** (km/h, „im Plan“/„hinterher“).
-- Kraft: **Maximalgewicht pro Übung**, bester Satz, geschätztes 1RM (Epley), Volumen,
+- Kraft: **Maximalgewicht pro Übung**, bester Satz, geschätztes 1RM (Epley), Volumen (Zeit-Übungen:
+  längste Dauer statt 1RM/Volumen),
   Bestwerte, Verlauf pro Übung.
 - Plan (geplant vs. erledigt, Trainingszeit pro Sportart) und Ernährung (Durchschnitte,
   Tage im/über Budget, gegessen vs. aktiv).

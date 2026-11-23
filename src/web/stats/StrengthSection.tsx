@@ -6,7 +6,7 @@ import type { Day } from "../../shared/days";
 import * as Format from "../../shared/format";
 import type { Period } from "../../shared/stats/period";
 import { periodTitle } from "../../shared/stats/period";
-import { exerciseSummaries, type ExerciseSummary, recordTitle, setLabel, strengthReport } from "../../shared/stats/strength";
+import { exerciseSummaries, type ExerciseSummary, recordTitle, recordValue, setLabel, strengthReport } from "../../shared/stats/strength";
 import { BackButton, NavBar } from "../components/NavBar";
 import { EmptyState, Row, Section, Spinner } from "../components/ui";
 import { useThemeColors } from "../lib/useThemeColors";
@@ -99,18 +99,21 @@ export function StrengthSection({ period, today, earliest }: { period: Period; t
   );
 }
 
-/** Estimated 1RMs are rounded to 0.5 kg and marked as approximate. */
-export const recordValue = (record: { kind: string; value: number }) =>
-  record.kind === "oneRepMax" ? `~${Format.weight(Math.round(record.value * 2) / 2)} kg` : `${Format.weight(record.value)} kg`;
-
 function ExerciseRow({ exercise, onClick }: { exercise: ExerciseSummary; onClick: () => void }) {
   return (
     <Row chevron onClick={onClick}>
       <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
         <span className="truncate">{exercise.name}</span>
         <span className="footnote secondary truncate">
-          {exercise.maxWeight ? `Max ${Format.weight(exercise.maxWeight.value)} kg` : `${exercise.setCount} sets`}
-          {exercise.bestOneRepMax ? ` · 1RM ~${Format.weight(Math.round(exercise.bestOneRepMax.value * 2) / 2)} kg` : ""}
+          {exercise.kind === "time"
+            ? exercise.longest
+              ? `Longest ${Format.seconds(exercise.longest.value)}`
+              : `${exercise.setCount} sets`
+            : exercise.maxWeight
+              ? `Max ${Format.weight(exercise.maxWeight.value)} kg`
+              : `${exercise.setCount} sets`}
+          {exercise.kind !== "time" && exercise.bestOneRepMax ? ` · 1RM ~${Format.weight(Math.round(exercise.bestOneRepMax.value * 2) / 2)} kg` : ""}
+          {exercise.kind === "time" && exercise.maxWeight ? ` · ${Format.weight(exercise.maxWeight.value)} kg` : ""}
           {exercise.lastDay ? ` · ${longDate(exercise.lastDay)}` : ""}
         </span>
       </div>
@@ -167,21 +170,31 @@ export function ExerciseDetailPage() {
       </div>
     );
   }
-  const data = exercise.history.map((h) => ({ day: h.day, max: h.maxWeight, oneRM: h.bestOneRepMax }));
+  const timed = exercise.kind === "time";
+  const data = exercise.history.map((h) => ({ day: h.day, max: timed ? h.longest : h.maxWeight, oneRM: timed ? null : h.bestOneRepMax }));
   return (
     <div className="page">
       <NavBar large title={exercise.name} leading={<BackButton label="Stats" fallback="/stats" />} />
       <div className="page-content">
         <StatsCard title="Best" icon={Trophy}>
+          {timed ? (
+          <MetricGrid>
+            <MetricTile title="Longest" value={exercise.longest ? Format.seconds(exercise.longest.value) : "–"} detail={exercise.longest ? longDate(exercise.longest.day) : undefined} />
+            <MetricTile title="Max weight" value={exercise.maxWeight ? Format.weight(exercise.maxWeight.value) : "–"} unit={exercise.maxWeight ? "kg" : undefined} detail={exercise.maxWeight ? longDate(exercise.maxWeight.day) : undefined} />
+            <MetricTile title="Best set" value={exercise.bestSet ? setLabel(exercise.bestSet.set) : "–"} detail={exercise.bestSet ? longDate(exercise.bestSet.day) : undefined} />
+            <MetricTile title="Sets" value={exercise.setCount.toLocaleString()} />
+          </MetricGrid>
+          ) : (
           <MetricGrid>
             <MetricTile title="Max weight" value={exercise.maxWeight ? Format.weight(exercise.maxWeight.value) : "–"} unit="kg" detail={exercise.maxWeight ? longDate(exercise.maxWeight.day) : undefined} />
             <MetricTile title="Est. 1RM" value={exercise.bestOneRepMax ? Format.weight(Math.round(exercise.bestOneRepMax.value * 2) / 2) : "–"} unit="kg" detail="Epley" />
             <MetricTile title="Best set" value={exercise.bestSet ? setLabel(exercise.bestSet.set) : "–"} detail={exercise.bestSet ? longDate(exercise.bestSet.day) : undefined} />
             <MetricTile title="Total volume" value={Format.volume(exercise.totalVolume)} unit={Format.volumeUnit(exercise.totalVolume)} detail={`${exercise.setCount} sets`} />
           </MetricGrid>
+          )}
         </StatsCard>
         {data.length > 1 && (
-          <StatsCard title="Progress" icon={BarChart3} trailing="kg">
+          <StatsCard title="Progress" icon={BarChart3} trailing={timed ? "seconds" : "kg"}>
             <div style={{ height: 180 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data} margin={{ top: 6, right: 0, bottom: 0, left: 0 }}>
@@ -194,10 +207,14 @@ export function ExerciseDetailPage() {
               </ResponsiveContainer>
             </div>
             <Legend
-              items={[
-                { color: colors.accent, label: "Max weight" },
-                { color: colors.label3, label: "Est. 1RM" },
-              ]}
+              items={
+                timed
+                  ? [{ color: colors.accent, label: "Longest set" }]
+                  : [
+                      { color: colors.accent, label: "Max weight" },
+                      { color: colors.label3, label: "Est. 1RM" },
+                    ]
+              }
             />
           </StatsCard>
         )}
@@ -208,7 +225,9 @@ export function ExerciseDetailPage() {
                 <span>{longDate(h.day)}</span>
                 <span className="footnote secondary">{h.sets.map(setLabel).join(", ")}</span>
               </div>
-              {h.maxWeight !== null && <span className="semibold tabular">{Format.weight(h.maxWeight)} kg</span>}
+              {timed
+                ? h.longest !== null && <span className="semibold tabular">{Format.seconds(h.longest)}</span>
+                : h.maxWeight !== null && <span className="semibold tabular">{Format.weight(h.maxWeight)} kg</span>}
             </div>
           ))}
         </Section>

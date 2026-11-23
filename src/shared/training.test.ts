@@ -3,6 +3,7 @@ import { lastPerformance, knownNames, setsSummary, type ExerciseRecord } from ".
 import { matchActivities, unplannedActivities } from "./matcher";
 import { instantiateTemplate, reorder, templateFromWeek, type TemplateSession } from "./weekPlanner";
 import {
+  changeExerciseKind,
   changeSport,
   detailsSummary,
   displayTitle,
@@ -10,6 +11,8 @@ import {
   type ExerciseSet,
   newBlock,
   newContent,
+  newExercise,
+  newTimeSet,
   newStep,
   parseContent,
   parseDetails,
@@ -26,12 +29,14 @@ const set = (plannedReps: number | null, plannedWeight: number | null = null, o:
   id: crypto.randomUUID(),
   plannedReps,
   plannedWeight,
+  plannedSeconds: null,
   actualReps: null,
   actualWeight: null,
+  actualSeconds: null,
   isDone: false,
   ...o,
 });
-const exercise = (name: string, sets: ExerciseSet[]): ExerciseEntry => ({ id: crypto.randomUUID(), name, sets, restSeconds: 90, notes: "" });
+const exercise = (name: string, sets: ExerciseSet[]): ExerciseEntry => ({ id: crypto.randomUUID(), name, kind: "reps", sets, restSeconds: 90, notes: "" });
 
 const pushDay: WorkoutDetails = {
   kind: "strength",
@@ -203,6 +208,51 @@ describe("race sessions", () => {
       kind: "general",
       durationMinutes: 240,
     });
+  });
+});
+
+describe("exercise kinds", () => {
+  it("parses stored exercises without a kind as reps + weight", () => {
+    const details = parseDetails({ kind: "strength", exercises: [{ name: "Bench", sets: [{ plannedReps: 5, plannedWeight: 80 }] }] }, "strength");
+    expect(details.kind === "strength" && details.exercises[0]).toMatchObject({ kind: "reps", sets: [{ plannedReps: 5, plannedSeconds: null, actualSeconds: null }] });
+  });
+
+  it("keeps time exercises and summarises them", () => {
+    const details = parseDetails(
+      { kind: "strength", exercises: [{ name: "Plank", kind: "time", sets: [{ plannedSeconds: 60, actualSeconds: 75, isDone: true }, { plannedSeconds: 60, isDone: true }] }] },
+      "strength",
+    );
+    if (details.kind !== "strength") throw new Error("strength expected");
+    const plank = details.exercises[0];
+    expect(plank.kind).toBe("time");
+    expect(setsSummary(plank.sets, "time")).toBe("1:15 min · 1:00 min");
+    const reset = resettingProgress(details);
+    expect(reset.kind === "strength" && reset.exercises[0].sets[0].actualSeconds).toBeNull();
+  });
+
+  it("switches an exercise between reps and time", () => {
+    const squat = newExercise("Wall Sit");
+    const timed = changeExerciseKind(squat, "time");
+    expect(timed.kind).toBe("time");
+    expect(timed.sets.every((s) => s.plannedSeconds === 30 && s.plannedReps === null)).toBe(true);
+    expect(newExercise("Plank", "time").sets[0]).toMatchObject({ plannedSeconds: 30, plannedReps: null });
+    const back = changeExerciseKind(timed, "reps");
+    expect(back.sets[0]).toMatchObject({ plannedReps: 8, plannedSeconds: null });
+  });
+
+  it("shows time sets for last time", () => {
+    const records: ExerciseRecord[] = [
+      {
+        sessionId: "a",
+        day: "2025-11-03",
+        workout: {
+          kind: "strength",
+          notes: "",
+          exercises: [{ ...newExercise("Farmer's Walk", "time"), sets: [{ ...newTimeSet(40, 24), isDone: true }, { ...newTimeSet(40, 24), isDone: true }] }],
+        },
+      },
+    ];
+    expect(lastPerformance("farmer's walk", "2025-11-10", null, records)?.summary).toBe("2 × 40 s @ 24 kg");
   });
 });
 

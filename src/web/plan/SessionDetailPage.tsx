@@ -4,15 +4,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { ActivityDTO, SessionDTO } from "../../shared/api";
 import { lastPerformance, type ExerciseRecord } from "../../shared/exerciseHistory";
 import * as Format from "../../shared/format";
-import { newRecords, recordTitle, sessionCounts, type StrengthSessionSnapshot } from "../../shared/stats/strength";
+import { newRecords, recordTitle, recordValue, sessionCounts, type StrengthSessionSnapshot } from "../../shared/stats/strength";
 import {
   detailsSummary,
   displayTitle,
   doneSetCount,
   type EnduranceDetails,
+  type ExerciseKind,
   type ExerciseSet,
   intensityLabel,
   newSet,
+  newTimeSet,
   plannedMinutes,
   setCount,
   sportInfo,
@@ -181,9 +183,7 @@ function SessionDetail({ data }: { data: NonNullable<ReturnType<typeof useSessio
                 <span className="grow">
                   {record.exercise} <span className="secondary">· {recordTitle(record.kind)}</span>
                 </span>
-                <span className="semibold tabular">
-                  {record.kind === "oneRepMax" ? `~${Format.weight(Math.round(record.value * 2) / 2)}` : Format.weight(record.value)} kg
-                </span>
+                <span className="semibold tabular">{recordValue(record)}</span>
               </div>
             ))}
           </Section>
@@ -414,6 +414,7 @@ function StrengthTracking({
             {exercise.sets.map((set, setIndex) => (
               <SetRow
                 key={set.id}
+                kind={exercise.kind}
                 number={setIndex + 1}
                 set={set}
                 onChange={(next, immediate) => updateSet(exerciseIndex, setIndex, next, immediate)}
@@ -428,7 +429,17 @@ function StrengthTracking({
                   {
                     ...workout,
                     exercises: workout.exercises.map((e, i) =>
-                      i === exerciseIndex ? { ...e, sets: [...e.sets, newSet(lastSet?.plannedReps ?? 8, lastSet?.plannedWeight ?? null)] } : e,
+                      i === exerciseIndex
+                        ? {
+                            ...e,
+                            sets: [
+                              ...e.sets,
+                              e.kind === "time"
+                                ? newTimeSet(lastSet?.plannedSeconds ?? 30, lastSet?.plannedWeight ?? null)
+                                : newSet(lastSet?.plannedReps ?? 8, lastSet?.plannedWeight ?? null),
+                            ],
+                          }
+                        : e,
                     ),
                   },
                   true,
@@ -451,15 +462,42 @@ function StrengthTracking({
   );
 }
 
-function SetRow({ number, set, onChange, onCompleted }: { number: number; set: ExerciseSet; onChange: (set: ExerciseSet, immediate?: boolean) => void; onCompleted: () => void }) {
-  const planned = set.plannedWeight !== null ? `${set.plannedReps ?? "–"} × ${Format.weight(set.plannedWeight)} kg` : `${set.plannedReps ?? "–"} reps`;
+function SetRow({
+  kind,
+  number,
+  set,
+  onChange,
+  onCompleted,
+}: {
+  kind: ExerciseKind;
+  number: number;
+  set: ExerciseSet;
+  onChange: (set: ExerciseSet, immediate?: boolean) => void;
+  onCompleted: () => void;
+}) {
+  const timed = kind === "time";
+  const weightText = set.plannedWeight !== null ? ` @ ${Format.weight(set.plannedWeight)} kg` : "";
+  const planned = timed
+    ? `${set.plannedSeconds !== null ? Format.seconds(set.plannedSeconds) : "–"}${weightText}`
+    : set.plannedWeight !== null
+      ? `${set.plannedReps ?? "–"} × ${Format.weight(set.plannedWeight)} kg`
+      : `${set.plannedReps ?? "–"} reps`;
   const toggle = () => {
     if (set.isDone) {
       onChange({ ...set, isDone: false }, true);
       return;
     }
     // Untouched fields mean "as planned".
-    onChange({ ...set, isDone: true, actualReps: set.actualReps ?? set.plannedReps, actualWeight: set.actualWeight ?? set.plannedWeight }, true);
+    onChange(
+      {
+        ...set,
+        isDone: true,
+        actualReps: timed ? set.actualReps : (set.actualReps ?? set.plannedReps),
+        actualSeconds: timed ? (set.actualSeconds ?? set.plannedSeconds) : set.actualSeconds,
+        actualWeight: set.actualWeight ?? set.plannedWeight,
+      },
+      true,
+    );
     navigator.vibrate?.(10);
     onCompleted();
   };
@@ -467,15 +505,31 @@ function SetRow({ number, set, onChange, onCompleted }: { number: number; set: E
     <div className="list-row compact set-row" style={{ gap: 8 }}>
       <span className="set-number">{number}</span>
       <span className="footnote secondary grow truncate">{planned}</span>
-      <OptionalNumber
-        narrow
-        maxFraction={0}
-        label={`Set ${number} reps`}
-        placeholder={set.plannedReps !== null ? String(set.plannedReps) : "reps"}
-        value={set.actualReps}
-        onChange={(actualReps) => onChange({ ...set, actualReps })}
-      />
-      <span className="secondary">×</span>
+      {timed ? (
+        <>
+          <OptionalNumber
+            narrow
+            maxFraction={0}
+            label={`Set ${number} seconds`}
+            placeholder={set.plannedSeconds !== null ? String(set.plannedSeconds) : "sec"}
+            value={set.actualSeconds}
+            onChange={(actualSeconds) => onChange({ ...set, actualSeconds })}
+          />
+          <span className="secondary">s</span>
+        </>
+      ) : (
+        <>
+          <OptionalNumber
+            narrow
+            maxFraction={0}
+            label={`Set ${number} reps`}
+            placeholder={set.plannedReps !== null ? String(set.plannedReps) : "reps"}
+            value={set.actualReps}
+            onChange={(actualReps) => onChange({ ...set, actualReps })}
+          />
+          <span className="secondary">×</span>
+        </>
+      )}
       <OptionalNumber
         maxFraction={2}
         label={`Set ${number} weight`}

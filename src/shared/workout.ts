@@ -68,14 +68,21 @@ export interface ExerciseSet {
   plannedReps: number | null;
   /** kg; null = bodyweight */
   plannedWeight: number | null;
+  /** Time exercises: duration per set. */
+  plannedSeconds: number | null;
   actualReps: number | null;
   actualWeight: number | null;
+  actualSeconds: number | null;
   isDone: boolean;
 }
+
+/** "reps": repetitions + weight (default); "time": duration per set, optional weight (plank, farmer's walk). */
+export type ExerciseKind = "reps" | "time";
 
 export interface ExerciseEntry {
   id: string;
   name: string;
+  kind: ExerciseKind;
   sets: ExerciseSet[];
   restSeconds: number | null;
   notes: string;
@@ -123,13 +130,33 @@ const newId = () =>
 
 export const performedReps = (set: ExerciseSet) => set.actualReps ?? set.plannedReps;
 export const performedWeight = (set: ExerciseSet) => set.actualWeight ?? set.plannedWeight;
+export const performedSeconds = (set: ExerciseSet) => set.actualSeconds ?? set.plannedSeconds;
 
 export function newSet(plannedReps: number | null = 8, plannedWeight: number | null = null): ExerciseSet {
-  return { id: newId(), plannedReps, plannedWeight, actualReps: null, actualWeight: null, isDone: false };
+  return { id: newId(), plannedReps, plannedWeight, plannedSeconds: null, actualReps: null, actualWeight: null, actualSeconds: null, isDone: false };
 }
 
-export function newExercise(name = ""): ExerciseEntry {
-  return { id: newId(), name, sets: [newSet(), newSet(), newSet()], restSeconds: 90, notes: "" };
+export function newTimeSet(plannedSeconds: number | null = 30, plannedWeight: number | null = null): ExerciseSet {
+  return { ...newSet(null, plannedWeight), plannedSeconds };
+}
+
+export function newExercise(name = "", kind: ExerciseKind = "reps"): ExerciseEntry {
+  const make = () => (kind === "time" ? newTimeSet() : newSet());
+  return { id: newId(), name, kind, sets: [make(), make(), make()], restSeconds: 90, notes: "" };
+}
+
+/** Switches an exercise between reps and time; sets keep their weight and done state. */
+export function changeExerciseKind(exercise: ExerciseEntry, kind: ExerciseKind): ExerciseEntry {
+  if (exercise.kind === kind) return exercise;
+  return {
+    ...exercise,
+    kind,
+    sets: exercise.sets.map((set) =>
+      kind === "time"
+        ? { ...set, plannedReps: null, actualReps: null, plannedSeconds: set.plannedSeconds ?? 30 }
+        : { ...set, plannedSeconds: null, actualSeconds: null, plannedReps: set.plannedReps ?? 8 },
+    ),
+  };
 }
 
 export function newStep(label = "", durationMinutes: number | null = 3, intensity: Intensity | null = { kind: "zone", value: 1 }): IntervalStep {
@@ -255,7 +282,7 @@ export function resettingProgress(details: WorkoutDetails): WorkoutDetails {
     ...details,
     exercises: details.exercises.map((exercise) => ({
       ...exercise,
-      sets: exercise.sets.map((set) => ({ ...set, isDone: false, actualReps: null, actualWeight: null })),
+      sets: exercise.sets.map((set) => ({ ...set, isDone: false, actualReps: null, actualWeight: null, actualSeconds: null })),
     })),
   };
 }
@@ -309,6 +336,8 @@ export function parseDetails(raw: unknown, fallback: SportCategory = "other"): W
           return {
             id: id(ex.id),
             name: text(ex.name),
+            // Exercises stored before V3 have no kind: repetitions + weight.
+            kind: ex.kind === "time" ? "time" : "reps",
             restSeconds: optNum(ex.restSeconds),
             notes: text(ex.notes),
             sets: list(ex.sets).map((s) => {
@@ -317,8 +346,10 @@ export function parseDetails(raw: unknown, fallback: SportCategory = "other"): W
                 id: id(set.id),
                 plannedReps: optNum(set.plannedReps),
                 plannedWeight: optNum(set.plannedWeight),
+                plannedSeconds: optNum(set.plannedSeconds),
                 actualReps: optNum(set.actualReps),
                 actualWeight: optNum(set.actualWeight),
+                actualSeconds: optNum(set.actualSeconds),
                 isDone: set.isDone === true,
               };
             }),

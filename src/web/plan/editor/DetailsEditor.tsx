@@ -8,14 +8,16 @@ import {
   type IntervalBlock,
   type IntervalStep,
   newBlock,
+  changeExerciseKind,
   newExercise,
   newSet,
+  newTimeSet,
   newStep,
   type StrengthDetails,
   type WorkoutDetails,
 } from "../../../shared/workout";
 import { ActionSheet } from "../../components/Sheet";
-import { Row, Section } from "../../components/ui";
+import { Row, Section, Segmented } from "../../components/ui";
 import { IntensitySelect, OptionalNumber, Stepper, TextArea } from "./fields";
 
 /** Editor for the sport-specific payload. */
@@ -69,20 +71,48 @@ function StrengthEditor({ workout, onChange, knownNames }: { workout: StrengthDe
               onChange={(event) => update(index, { ...exercise, name: event.target.value })}
             />
           </div>
+          <div className="list-row compact">
+            <Segmented
+              className="grow"
+              value={exercise.kind}
+              onChange={(kind) => update(index, changeExerciseKind(exercise, kind))}
+              options={[
+                { value: "reps", label: "Reps + weight" },
+                { value: "time", label: "Time" },
+              ]}
+            />
+          </div>
           {exercise.sets.map((set, setIndex) => (
             <div key={set.id} className="list-row compact" style={{ gap: 8 }}>
               <span className="grow secondary">Set {setIndex + 1}</span>
-              <OptionalNumber
-                narrow
-                maxFraction={0}
-                placeholder="reps"
-                value={set.plannedReps}
-                onChange={(plannedReps) => update(index, { ...exercise, sets: replaceAt(exercise.sets, setIndex, { ...set, plannedReps }) })}
-              />
-              <span className="secondary">×</span>
+              {exercise.kind === "time" ? (
+                <>
+                  <OptionalNumber
+                    narrow
+                    maxFraction={0}
+                    placeholder="sec"
+                    label={`Set ${setIndex + 1} seconds`}
+                    value={set.plannedSeconds}
+                    onChange={(plannedSeconds) => update(index, { ...exercise, sets: replaceAt(exercise.sets, setIndex, { ...set, plannedSeconds }) })}
+                  />
+                  <span className="secondary">s</span>
+                </>
+              ) : (
+                <>
+                  <OptionalNumber
+                    narrow
+                    maxFraction={0}
+                    placeholder="reps"
+                    value={set.plannedReps}
+                    onChange={(plannedReps) => update(index, { ...exercise, sets: replaceAt(exercise.sets, setIndex, { ...set, plannedReps }) })}
+                  />
+                  <span className="secondary">×</span>
+                </>
+              )}
               <OptionalNumber
                 maxFraction={2}
-                placeholder="kg"
+                placeholder={exercise.kind === "time" ? "opt." : "kg"}
+                label={`Set ${setIndex + 1} weight`}
                 value={set.plannedWeight}
                 onChange={(plannedWeight) => update(index, { ...exercise, sets: replaceAt(exercise.sets, setIndex, { ...set, plannedWeight }) })}
               />
@@ -96,7 +126,8 @@ function StrengthEditor({ workout, onChange, knownNames }: { workout: StrengthDe
             className="action"
             onClick={() => {
               const last = exercise.sets[exercise.sets.length - 1];
-              update(index, { ...exercise, sets: [...exercise.sets, newSet(last?.plannedReps ?? 8, last?.plannedWeight ?? null)] });
+              const next = exercise.kind === "time" ? newTimeSet(last?.plannedSeconds ?? 30, last?.plannedWeight ?? null) : newSet(last?.plannedReps ?? 8, last?.plannedWeight ?? null);
+              update(index, { ...exercise, sets: [...exercise.sets, next] });
             }}
           >
             <Plus size={20} /> <span className="row-title">Add Set</span>

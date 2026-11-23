@@ -6,7 +6,7 @@ import { type ActivitySnapshot, classifyActivity, elapsedFraction, enduranceRepo
 import { nutritionReport } from "./nutrition";
 import { bucketStarts, periodInterval, periodTitle } from "./period";
 import { planReport } from "./plan";
-import { exerciseSummaries, newRecords, oneRepMax, performedSets, personalRecords, strengthReport, type StrengthSessionSnapshot } from "./strength";
+import { exerciseSummaries, newRecords, oneRepMax, performedSets, personalRecords, recordValue, setLabel, strengthReport, type StrengthSessionSnapshot } from "./strength";
 
 const today = "2025-11-19"; // Wednesday
 
@@ -113,9 +113,19 @@ describe("strength", () => {
   const ex = (name: string, sets: [number, number | null, boolean][]): ExerciseEntry => ({
     id: crypto.randomUUID(),
     name,
+    kind: "reps",
     restSeconds: 90,
     notes: "",
-    sets: sets.map(([reps, weight, isDone]) => ({ id: crypto.randomUUID(), plannedReps: reps, plannedWeight: weight, actualReps: null, actualWeight: null, isDone })),
+    sets: sets.map(([reps, weight, isDone]) => ({
+      id: crypto.randomUUID(),
+      plannedReps: reps,
+      plannedWeight: weight,
+      plannedSeconds: null,
+      actualReps: null,
+      actualWeight: null,
+      actualSeconds: null,
+      isDone,
+    })),
   });
   const session = (day: string, exercises: ExerciseEntry[], isDone = true, id: string = crypto.randomUUID()): StrengthSessionSnapshot => ({
     id,
@@ -131,12 +141,13 @@ describe("strength", () => {
     const sets = performedSets({
       id: "x",
       name: "Squat",
+      kind: "reps",
       restSeconds: null,
       notes: "",
       sets: [
-        { id: "1", plannedReps: 5, plannedWeight: 100, actualReps: 4, actualWeight: 102.5, isDone: true },
-        { id: "2", plannedReps: 5, plannedWeight: 100, actualReps: null, actualWeight: null, isDone: false },
-        { id: "3", plannedReps: 10, plannedWeight: null, actualReps: null, actualWeight: null, isDone: true },
+        { id: "1", plannedReps: 5, plannedWeight: 100, plannedSeconds: null, actualReps: 4, actualWeight: 102.5, actualSeconds: null, isDone: true },
+        { id: "2", plannedReps: 5, plannedWeight: 100, plannedSeconds: null, actualReps: null, actualWeight: null, actualSeconds: null, isDone: false },
+        { id: "3", plannedReps: 10, plannedWeight: null, plannedSeconds: null, actualReps: null, actualWeight: null, actualSeconds: null, isDone: true },
       ],
     });
     expect(sets).toEqual([{ reps: 4, weight: 102.5 }, { reps: 10, weight: null }]);
@@ -282,3 +293,47 @@ describe("nutrition stats", () => {
     expect(r.buckets.find((b) => b.start === "2025-11-03")?.average.kcal).toBe(2000);
   });
 });
+
+describe("time exercises", () => {
+  const timeExercise = (name: string, sets: [number, number | null, boolean][]): ExerciseEntry => ({
+    id: crypto.randomUUID(),
+    name,
+    kind: "time",
+    restSeconds: 60,
+    notes: "",
+    sets: sets.map(([seconds, weight, isDone]) => ({
+      id: crypto.randomUUID(),
+      plannedReps: null,
+      plannedWeight: weight,
+      plannedSeconds: seconds,
+      actualReps: null,
+      actualWeight: null,
+      actualSeconds: null,
+      isDone,
+    })),
+  });
+  const session = (day: string, exercises: ExerciseEntry[], id: string = crypto.randomUUID()): StrengthSessionSnapshot => ({
+    id,
+    day,
+    isDone: true,
+    workout: { kind: "strength", exercises, notes: "" },
+  });
+
+  it("count duration, not 1RM or volume", () => {
+    const sets = performedSets(timeExercise("Plank", [[60, null, true], [45, null, true], [30, null, false]]));
+    expect(sets).toEqual([{ reps: 0, weight: null, seconds: 60 }, { reps: 0, weight: null, seconds: 45 }]);
+    const summaries = exerciseSummaries([session("2025-11-03", [timeExercise("Farmer's Walk", [[40, 24, true], [50, 20, true]])])]);
+    expect(summaries[0]).toMatchObject({ kind: "time", totalVolume: 0, bestOneRepMax: null, longest: { value: 50 } });
+    expect(summaries[0].maxWeight?.value).toBe(24);
+    expect(setLabel(summaries[0].bestSet!.set)).toBe("50 s @ 20 kg");
+  });
+
+  it("records the longest set", () => {
+    const first = session("2025-11-03", [timeExercise("Plank", [[60, null, true]])]);
+    const second = session("2025-11-10", [timeExercise("Plank", [[90, null, true]])]);
+    expect(newRecords(second, [first])).toEqual([{ exercise: "Plank", key: "plank", kind: "longest", value: 90, day: "2025-11-10" }]);
+    const records = personalRecords(exerciseSummaries([first, second]));
+    expect(records.map((r) => [r.kind, recordValue(r)])).toEqual([["longest", "1:30 min"]]);
+  });
+});
+
