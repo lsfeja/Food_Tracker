@@ -20,3 +20,12 @@ build/
 
 # macOS
 .DS_Store
+
+# Web app
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.local
+coverage/
+dev-dist/

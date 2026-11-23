@@ -1,0 +1,34 @@
+# Cloudflare Worker: serves the PWA (static assets) and the API under /api.
+name = "foodtracker"
+main = "src/worker/index.ts"
+compatibility_date = "2025-10-01"
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+# Client-side routing: unknown paths serve index.html …
+not_found_handling = "single-page-application"
+# … except the API, which always goes to the Worker.
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "foodtracker"
+# Replace with the ID printed by `npx wrangler d1 create foodtracker` (see README).
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# Background Strava sync and history import.
+[triggers]
+crons = ["*/30 * * * *"]
+
+[vars]
+# Cloudflare Access (Zero Trust › Access › Applications › your app):
+# team domain like "yourteam.cloudflareaccess.com" and the Application Audience (AUD) tag.
+# When both are set, every API request must carry a valid Access JWT.
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
+
+# Secrets (never put them here): set with `npx wrangler secret put <NAME>`
+#   STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY
+# Local development reads them from .dev.vars (see .dev.vars.example).
