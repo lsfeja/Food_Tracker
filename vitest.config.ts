@@ -9,6 +9,7 @@ export default defineConfig({
           name: "shared",
           include: ["src/shared/**/*.test.ts"],
           environment: "node",
+          setupFiles: ["./src/shared/test-setup.ts"],
         },
       },
       {
