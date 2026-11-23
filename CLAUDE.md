@@ -90,7 +90,7 @@ src/web/
   components/           NavBar/BackButton/BarButton, Sheet/ActionSheet, SwipeRow, TabBar,
                         PullToRefresh, PromptDialog, Toast, ui (Section, Row, inputs, …)
   lib/                  dates (Intl, UTC-safe day formatting), useToday, useOnline,
-                        usePersistentState, useThemeColors, ocr (Tesseract)
+                        usePersistentState, theme, useThemeColors, ocr (Tesseract)
   nutrition/            NutritionHome/DayPage, DayDashboard, DayWidgets, EditEntrySheet,
                         HistoryPage, SettingsPage, ActivitySettingsSection,
                         add/ (AddFoodSheet stack: search, portion, food editor, quick add),
@@ -170,7 +170,9 @@ need defaults. Tests apply all migrations to a fresh local D1 (`test/worker/setu
 ## Conventions
 
 - Look and feel like the iOS app: grouped background, inset cards, system font, one green
-  accent (`--accent`), orange only for "over budget/behind", light and dark via CSS variables.
+  accent (`--accent`), orange only for "over budget/behind", light and dark via CSS variables
+  under `:root[data-theme="dark"]` (`lib/theme.ts`: System/Light/Dark per device in
+  localStorage, applied before the first paint by the inline script in `index.html`).
   Inputs ≥ 16 px (no iOS zoom), safe-area insets, mobile first (max width 640 px).
 - Swipe actions on rows are delete/duplicate (or hide/edit for foods); week navigation swipes
   on the week strip, not the list. Long press = drag (plan) / quick menu (+ button).

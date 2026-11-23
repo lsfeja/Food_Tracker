@@ -10,7 +10,8 @@ import { SwipeRow } from "../components/SwipeRow";
 import { formatDay } from "../lib/dates";
 import { useToday } from "../lib/useToday";
 import { BackButton, NavBar } from "../components/NavBar";
-import { LabeledRow, NumberSetting, Section, ToggleRow } from "../components/ui";
+import { LabeledRow, NumberSetting, Section, Segmented, ToggleRow } from "../components/ui";
+import { setThemePreference, useThemePreference } from "../lib/theme";
 import { ActivitySettingsSection } from "./ActivitySettingsSection";
 
 /** Targets, weekly budget mode, activity integration. */
@@ -74,6 +75,8 @@ export function SettingsPage() {
             </div>
           )}
         </Section>
+
+        <AppearanceSection />
 
         <Section footer="Your data is stored in your own Cloudflare D1 database. Access is protected by Cloudflare Access.">
           <LabeledRow label="Account" value={me.data?.email ?? "–"} />
@@ -222,6 +225,27 @@ function VacationSection() {
           }}
         />
       </label>
+    </Section>
+  );
+}
+
+/** Light/dark: follow the system or choose one (per device). */
+function AppearanceSection() {
+  const preference = useThemePreference();
+  return (
+    <Section header="Appearance" footer="System follows the light/dark setting of this device. The choice is saved on this device.">
+      <div className="list-row compact">
+        <Segmented
+          className="grow"
+          value={preference}
+          onChange={setThemePreference}
+          options={[
+            { value: "system", label: "System" },
+            { value: "light", label: "Light" },
+            { value: "dark", label: "Dark" },
+          ]}
+        />
+      </div>
     </Section>
   );
 }

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { isDarkTheme, subscribeTheme } from "./theme";
 
 /** Resolved theme colors for SVG charts (CSS variables can't be used everywhere). */
 export interface ThemeColors {
@@ -14,11 +15,10 @@ export interface ThemeColors {
   card: string;
 }
 
-const media = typeof window !== "undefined" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 let cache: { dark: boolean; colors: ThemeColors } | null = null;
 
 function read(): ThemeColors {
-  const dark = media?.matches ?? false;
+  const dark = isDarkTheme();
   if (cache && cache.dark === dark) return cache.colors;
   const style = getComputedStyle(document.documentElement);
   const v = (name: string) => style.getPropertyValue(name).trim();
@@ -39,8 +39,7 @@ function read(): ThemeColors {
 }
 
 function subscribe(callback: () => void) {
-  media?.addEventListener("change", callback);
-  return () => media?.removeEventListener("change", callback);
+  return subscribeTheme(callback);
 }
 
 export function useThemeColors(): ThemeColors {
