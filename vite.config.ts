@@ -17,6 +17,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: false,
+      // Behind Cloudflare Access the manifest request must carry the Access cookie.
+      useCredentials: true,
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "Foodtracker",

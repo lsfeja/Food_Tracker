@@ -2,6 +2,8 @@
 name = "foodtracker"
 main = "src/worker/index.ts"
 compatibility_date = "2025-10-01"
+# Version preview URLs would bypass a custom-domain Access application.
+preview_urls = false
 
 [assets]
 directory = "./dist/client"
