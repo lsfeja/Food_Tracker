@@ -4,6 +4,7 @@ import { authenticate, userIdFor } from "./auth";
 import type { AppContext, Env } from "./env";
 import { nutrition } from "./routes/nutrition";
 import { off } from "./routes/off";
+import { training } from "./routes/training";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -21,6 +22,7 @@ app.use("*", async (c, next) => {
 app.get("/me", (c) => c.json({ email: c.get("email") }));
 app.route("/", nutrition);
 app.route("/", off);
+app.route("/", training);
 
 app.onError((error, c) => {
   if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
