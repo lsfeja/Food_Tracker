@@ -1656,3 +1656,34 @@ input[type="range"] {
   height: 24px;
   font-size: 12px;
 }
+
+/* MARK: Week change (Plan) */
+
+.week-strip-wrap {
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.week-slide.next {
+  animation: slide-from-right 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.week-slide.prev {
+  animation: slide-from-left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slide-from-right {
+  from {
+    transform: translateX(35%);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-from-left {
+  from {
+    transform: translateX(-35%);
+    opacity: 0;
+  }
+}

@@ -41,9 +41,17 @@ export function PlanPage() {
   const title = offset === 0 ? "This Week" : offset === 1 ? "Next Week" : offset === -1 ? "Last Week" : weekLabel(start);
   const showingToday = offset === 0 && (mode === "week" || selectedDay === today);
 
+  const [slide, setSlide] = useState<"next" | "prev" | null>(null);
   const changeWeek = (delta: number) => {
+    setSlide(delta > 0 ? "next" : "prev");
     setParams(delta === -offset ? {} : { week: addDays(start, 7 * delta) }, { replace: true });
     setSelectedDay((day) => addDays(day, 7 * delta));
+  };
+  const goToToday = () => {
+    if (offset !== 0) setSlide(offset > 0 ? "prev" : "next");
+    setParams({}, { replace: true });
+    setSelectedDay(today);
+    window.scrollTo({ top: 0 });
   };
 
   // Bring today into view when opening the current week.
@@ -67,15 +75,7 @@ export function PlanPage() {
         title={title}
         leading={
           !showingToday && (
-            <BarButton
-              onClick={() => {
-                setParams({}, { replace: true });
-                setSelectedDay(today);
-                window.scrollTo({ top: 0 });
-              }}
-            >
-              Today
-            </BarButton>
+            <BarButton onClick={goToToday}>Today</BarButton>
           )
         }
         trailing={
@@ -99,6 +99,8 @@ export function PlanPage() {
             }}
             onSelect={select}
             onSwipe={changeWeek}
+            slide={slide}
+            weekKey={start}
           />
         }
       />
@@ -108,7 +110,7 @@ export function PlanPage() {
           await client.invalidateQueries({ queryKey: ["plan"] });
         }}
       >
-        <div className="page-content" style={{ paddingTop: 16 }}>
+        <div key={start} className={`page-content week-slide ${slide ?? ""}`} style={{ paddingTop: 16 }}>
           {week.isPending ? (
             <div className="empty-state">
               <Spinner />
@@ -154,7 +156,7 @@ export function PlanPage() {
   );
 }
 
-/** Mon–Sun with today highlighted and completion dots. Swipe to change week. */
+/** Mon–Sun with today highlighted and completion dots. Swipe to change week (follows the finger). */
 function WeekStrip({
   days,
   today,
@@ -162,6 +164,8 @@ function WeekStrip({
   progress,
   onSelect,
   onSwipe,
+  slide,
+  weekKey,
 }: {
   days: Day[];
   today: Day;
@@ -169,51 +173,78 @@ function WeekStrip({
   progress: (day: Day) => [number, number];
   onSelect: (day: Day) => void;
   onSwipe: (delta: number) => void;
+  slide: "next" | "prev" | null;
+  weekKey: Day;
 }) {
-  const start = useRef<{ x: number; y: number } | null>(null);
+  const gesture = useRef<{ x: number; y: number; id: number; axis: "x" | "y" | null } | null>(null);
   const swiped = useRef(false);
+  const [dx, setDx] = useState(0);
+  const end = (event: React.PointerEvent) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || g.axis !== "x") {
+      setDx(0);
+      return;
+    }
+    const distance = event.clientX - g.x;
+    setDx(0);
+    if (Math.abs(distance) > 50) {
+      swiped.current = true;
+      onSwipe(distance < 0 ? 1 : -1);
+    }
+  };
   return (
     <div
-      className="week-strip"
+      className="week-strip-wrap"
       onPointerDown={(event) => {
-        start.current = { x: event.clientX, y: event.clientY };
+        gesture.current = { x: event.clientX, y: event.clientY, id: event.pointerId, axis: null };
         swiped.current = false;
       }}
-      onPointerUp={(event) => {
-        const s = start.current;
-        start.current = null;
-        if (!s) return;
-        const dx = event.clientX - s.x;
-        const dy = event.clientY - s.y;
-        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-          swiped.current = true;
-          onSwipe(dx < 0 ? 1 : -1);
+      onPointerMove={(event) => {
+        const g = gesture.current;
+        if (!g || g.id !== event.pointerId) return;
+        const mx = event.clientX - g.x;
+        const my = event.clientY - g.y;
+        if (g.axis === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
+          g.axis = Math.abs(mx) > Math.abs(my) ? "x" : "y";
+          if (g.axis === "x") (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
         }
+        if (g.axis === "x") setDx(mx);
       }}
-      onPointerCancel={() => (start.current = null)}
+      onPointerUp={end}
+      onPointerCancel={() => {
+        gesture.current = null;
+        setDx(0);
+      }}
     >
-      {days.map((day) => {
-        const [done, total] = progress(day);
-        return (
-          <button
-            key={day}
-            type="button"
-            className={`week-day ${day === today ? "today" : ""} ${day === selected ? "selected" : ""}`}
-            aria-label={`${formatDay(day, { weekday: "long", day: "numeric", month: "long" })}, ${done} of ${total} done`}
-            onClick={() => {
-              if (!swiped.current) onSelect(day);
-            }}
-          >
-            <span className="weekday">{weekdayNarrow(day)}</span>
-            <span className="date">{Number(day.slice(8))}</span>
-            <span className="week-dots">
-              {Array.from({ length: Math.min(total, 3) }, (_, i) => (
-                <span key={i} className={i < done ? "done" : ""} />
-              ))}
-            </span>
-          </button>
-        );
-      })}
+      <div
+        key={weekKey}
+        className={`week-strip week-slide ${dx === 0 ? (slide ?? "") : "dragging"}`}
+        style={dx ? { transform: `translateX(${dx}px)`, opacity: Math.max(1 - Math.abs(dx) / 400, 0.4) } : undefined}
+      >
+        {days.map((day) => {
+          const [done, total] = progress(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              className={`week-day ${day === today ? "today" : ""} ${day === selected ? "selected" : ""}`}
+              aria-label={`${formatDay(day, { weekday: "long", day: "numeric", month: "long" })}, ${done} of ${total} done`}
+              onClick={() => {
+                if (!swiped.current) onSelect(day);
+              }}
+            >
+              <span className="weekday">{weekdayNarrow(day)}</span>
+              <span className="date">{Number(day.slice(8))}</span>
+              <span className="week-dots">
+                {Array.from({ length: Math.min(total, 3) }, (_, i) => (
+                  <span key={i} className={i < done ? "done" : ""} />
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
