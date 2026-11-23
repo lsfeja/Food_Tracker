@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Foodtracker</title>
+    <meta name="description" content="Nutrition tracking, training plan and stats." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- iPhone home screen: full-screen start, icon, title, status bar -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Foodtracker" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#F2F2F7" />
+    <!-- Light/dark before the first paint (Settings › Appearance, stored per device). -->
+    <script>
+      (function () {
+        var p = null;
+        try { p = localStorage.getItem("theme"); } catch (e) {}
+        var dark = p === "dark" || (p !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#000000" : "#F2F2F7");
+      })();
+    </script>
+    <meta name="format-detection" content="telephone=no" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/web/main.tsx"></script>
+  </body>
+</html>

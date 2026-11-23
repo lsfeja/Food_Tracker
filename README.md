@@ -1,84 +1,258 @@
-# Foodtracker
+# Foodtracker (Web-App)
 
-A minimalist all-in-one sports app for iPhone (SwiftUI, SwiftData, iOS 18+): nutrition
-tracking, a training plan and statistics. It is built for private use. Logging a meal or ticking off
-a workout should take seconds.
+Private All-in-one-Sport-App als **PWA**: Kalorien- und Makro-Tracking, Trainingsplan und
+Statistiken. Läuft auf **Cloudflare** (ein Worker liefert Frontend und API aus, Daten in
+**D1**) und wird auf dem iPhone wie eine App vom Home-Bildschirm gestartet. Zugriffsschutz
+übernimmt **Cloudflare Access**; die App hat kein eigenes Login.
 
-## Nutrition tab
+Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dauert Sekunden.
 
-- **Home**: a ring with the calories you have left (target + Strava active kcal − eaten),
-  protein and carb bars (fat smaller), today's entries (swipe to edit or delete), and a
-  big **+** button (long-press it to scan or photograph a label).
-- **Add food**: search your recent, frequent and saved foods. Enter grams, and nutrients
-  scale from per-100 g values. You can also create foods or quick-add calories.
-- **Barcode**: VisionKit scanner with Open Food Facts lookup. If a product isn't found,
-  you can photograph its label or enter the values manually.
-- **Label photo**: on-device OCR (Vision) reads per-100 g values from German and
-  English labels. You confirm them before saving.
-- **Targets**: daily calories and macros, plus an optional rolling weekly budget with
-  carry-over.
-- **History**: daily and weekly totals with charts. Tap a day to see or edit its entries.
-- **Strava**: OAuth login, with tokens kept in the Keychain. Activity calories count as
-  active calories (toggle, 50–100 %).
-- **Widgets**: Lock Screen circular, rectangular and inline widgets, a Home Screen small
-  widget, and a **Log Food** control for the Lock Screen and Control Center.
+> Die frühere native iOS-App (SwiftUI) ist mit dem Git-Tag `ios-final` archiviert
+> (gleicher Stand: Branch `claude/foodtracker-ios-app-n2c1fe`).
 
-## Plan tab
+## Funktionen
 
-- **Training calendar**: the week as a to-do list grouped by day, with today highlighted.
-  Swipe the week strip to change weeks, and switch between day and week view.
-- **Sessions**: tick them off, add with + per day, drag & drop between days, swipe to
-  delete or duplicate.
-- **Session details by sport**:
-  - Strength: sets × reps × weight, rest timer, tick off sets with actual values, and
-    your values from last time.
-  - Endurance: duration, distance, zones/RPE and intervals.
-  - Mobility, yoga, rest days and custom sessions: notes and duration.
-- **Workout library**: reusable workouts, copied when used, so editing one never changes
-  past sessions.
-- **Week templates**: build them, save a week as one, and load one into any week with a
-  preview (add or replace).
-- **Strava**: imported activities are matched to planned sessions on the same day by
-  sport and marked done, with actual duration and distance shown. Unplanned activities
-  appear in the day list. You can link and unlink manually.
-- **Widgets**: today's training on the Lock Screen (rectangular) and Home Screen
-  (small). Tapping one opens the session.
+**Ernährung**
+- **Wochenbudget** (V3): Wochenplan = (Grundumsatz + Ø Aktivkalorien der letzten 4 Wochen) × 7;
+  im Schnitt zählt die Vorwoche doppelt (Gewichtung 2 : 1 : 1 : 1 pro Tag).
+  Mehr Training als im Schnitt füllt den Rest der Woche auf (mindestens 3 Tage, auch über die
+  Wochengrenze; der Bonus kommt oben auf das Tagesminimum und wird nicht weggekürzt), weniger kürzt
+  die Folgetage; Ruhetage aus dem Plan sind geschützt, die Tage haben eine Untergrenze (max.
+  Defizit pro Tag einstellbar). Gegessenes über/unter dem Tagesziel wandert auf die Folgetage und
+  in die nächste Woche; nicht unterzubringende Kürzungen nur anteilig (Standard 70 %).
+- Tagesübersicht: Ring mit verbleibenden kcal des Tagesziels, Wochenkarte, Makro-Balken,
+  Einträge (wischen zum Bearbeiten/Löschen), großer **+**-Button (gedrückt halten → Scan/Etikett).
+- Hinzufügen: zuletzt/häufig verwendete und eigene Lebensmittel, Suche in Open Food Facts,
+  Menge in Gramm (Nährwerte pro 100 g werden skaliert), neue Lebensmittel, Schnelleintrag.
+- **Barcode-Scan** über die iPhone-Kamera (ZXing) mit Open-Food-Facts-Abfrage; unbekannte
+  Produkte → Etikett fotografieren oder manuell erfassen.
+- **Etikett-Foto**: Texterkennung im Browser (Tesseract.js, Deutsch/Englisch) liest die
+  Werte pro 100 g; du bestätigst sie im Editor.
+- Grundumsatz (Ruhe + Alltagsbewegung), Makroziele, Anteil der aktiven Kalorien (50–100 %).
+- **Urlaubstage**: einzelne Tage als „nicht getrackt“ markieren (auch im Voraus, in den
+  Einstellungen oder per Schalter am Tag): kein Budget, keine Bilanz, nicht im 4-Wochen-Schnitt;
+  Strava-Aktivitäten zählen trotzdem in der Sportstatistik.
+- **Ziel-Slider**: Defizit (Fett reduzieren) oder Überschuss (Masse aufbauen) in kcal/Tag; das
+  Defizit ist durch die Untergrenze des Wochenbudgets begrenzt, der Überschuss auf +750.
+- Verlauf: Tage und Wochen mit Diagrammen; jeder Tag lässt sich öffnen und nachtragen.
+- **Gewicht**: ein Wert pro Tag (optional Körperfett) direkt auf „Today“ eintragen; die
+  Gewichtsseite zeigt Tageswerte, 7-Tage-Schnitt, kg pro Woche (Trend der letzten 4 Wochen) und
+  die Veränderung im gewählten Zeitraum. Das Budget bleibt davon unberührt.
 
-## Stats tab
+**Plan**
+- Trainingskalender als To-do-Liste pro Woche (Woche/Tag), heute hervorgehoben, Wochenleiste
+  zum Wischen, **+** pro Tag, Abhaken, Wischen zum Löschen/Duplizieren,
+  **Drag & Drop** (lange drücken) zwischen Tagen.
+- Details je Sportart: Kraft (pro Übung **Wiederholungen + Gewicht** oder **Zeit** pro Satz,
+  optional mit Gewicht, z. B. Plank, Wall Sit, Farmer's Walk; Ist-Werte, „letztes Mal“,
+  Pausentimer, neue Bestwerte), Ausdauer (Dauer, Distanz, Zonen/RPE, Intervalle),
+  Mobility/Yoga/Ruhetag/Eigene (Notizen, Dauer), **Race** (Wettkampf, vorerst nur planbar). Krafttraining bleibt in der App
+  (kein Upload zu Strava).
+- Workout-Bibliothek (Kopie beim Einplanen), Wochenvorlagen (Woche speichern, Vorlage mit
+  Vorschau laden: hinzufügen oder ersetzen – erledigte Einheiten bleiben).
+- **Strava**: Aktivitäten werden Einheiten am selben Tag zugeordnet und haken sie ab;
+  ungeplante Aktivitäten erscheinen in der Liste; manuell verknüpfen/lösen.
 
-- **Period**: week, month, year or all time, plus a year picker.
-- **Endurance** (per sport or cycling combined): distance, time, elevation and activity
-  counts; weekly and monthly volume; this year vs. last year (cumulative); longest
-  activity, most elevation, best week and month; indoor vs. outdoor share; optional
-  yearly goals with "on track / behind".
-- **Strength**: max weight, best set, estimated 1RM (Epley) and volume per exercise;
-  personal records (new ones are highlighted when a workout is finished); progress
-  charts and full history per exercise; weekly volume and session counts.
-- **Plan**: planned vs. completed sessions, and training time per sport.
-- **Nutrition**: daily averages vs. targets, days within or over budget, and eaten vs.
-  active calories.
-- **History import**: Settings › Activity History imports your full Strava history
-  once. It respects rate limits and resumes automatically.
-- **Widget**: a Home Screen "Year to Date" widget (small/medium) for a chosen sport,
-  with goal progress.
+**Statistik**
+- Zeitraum Woche/Monat/Jahr/Gesamt, Jahresauswahl.
+- Ausdauer (pro Sportart oder Rad gesamt): km, Zeit, Höhenmeter, Wochen-/Monatsvolumen,
+  Jahr vs. Vorjahr, Rekorde, Indoor-Anteil, **Jahresziele** (km/h, „im Plan“/„hinterher“).
+- Kraft: **Maximalgewicht pro Übung**, bester Satz, geschätztes 1RM (Epley), Volumen (Zeit-Übungen:
+  längste Dauer statt 1RM/Volumen),
+  Bestwerte, Verlauf pro Übung.
+- Plan (geplant vs. erledigt, Trainingszeit pro Sportart) und Ernährung (Durchschnitte,
+  Tage im/über Budget, gegessen vs. aktiv).
+- **Strava-Historie**: einmaliger Import aller früheren Aktivitäten, mit Rate-Limit-Pausen,
+  läuft im Hintergrund weiter.
 
-## Setup
+**Offline**: App-Oberfläche und zuletzt geladene Daten sind offline lesbar; Änderungen
+brauchen eine Verbindung.
 
-1. **Secrets**: run `cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig`, then
-   set `STRAVA_CLIENT_SECRET`. This file is gitignored.
-2. **Bundle ID prefix**: `BUNDLE_ID_PREFIX` in `Config/Base.xcconfig` is `com.lucasfeja`, so
-   the app is `com.lucasfeja.foodtracker` and the App Group is
-   `group.com.lucasfeja.foodtracker`. Don't override it in `Secrets.xcconfig`.
-3. **Signing**: open `Foodtracker.xcodeproj`. For the *Foodtracker* and
-   *FoodtrackerWidgetsExtension* targets, pick your team under *Signing & Capabilities*
-   (automatic signing registers the App Group), or set `DEVELOPMENT_TEAM` in
-   `Secrets.xcconfig`.
-4. **Strava**: in your [Strava API settings](https://www.strava.com/settings/api), set
-   *Authorization Callback Domain* to `foodtracker`.
-5. Build and run the *Foodtracker* scheme on your iPhone. Run the tests with ⌘U.
+**Nicht in dieser Version** (im Datenmodell vorbereitet): KI-Schätzmodus
+(`food_entries.source = 'ai'`, `is_estimated`), Garmin-Import (`connections.provider`,
+`activities.source`, Rate-Limits und Import-Status pro Anbieter).
 
-To add the control, long-press the Lock Screen, tap *Customize*, then *Lock Screen*,
-then tap a bottom control slot and choose *Foodtracker › Log Food*. Pick what it opens:
-add food, barcode scanner or label photo.
+**Was eine PWA nicht kann** (gab es nur in der iOS-App): Widgets, Steuerelement im
+Kontrollzentrum, Siri-Kurzbefehle. Ersatz: Links wie `/add?mode=barcode`, `/add?mode=label`,
+`/plan` oder `/stats` als Lesezeichen bzw. eigenes Home-Bildschirm-Symbol anlegen.
 
-See [CLAUDE.md](CLAUDE.md) for architecture and conventions.
+## Architektur
+
+| Teil | Technik |
+|------|---------|
+| Frontend | Vite, React, TypeScript, PWA (vite-plugin-pwa), TanStack Query mit IndexedDB-Cache |
+| Backend | Cloudflare Worker mit Static Assets, API unter `/api` (Hono) |
+| Datenbank | Cloudflare D1, SQL-Migrationen in `migrations/` |
+| Hintergrund | Cron Trigger alle 30 min (Strava-Sync, Historien-Import) |
+| Auth | Cloudflare Access; E-Mail aus `Cf-Access-Authenticated-User-Email` bzw. geprüftem Access-JWT |
+
+Rein logische Teile (Budget, Parser, Statistik, Matching, Wochenvorlagen) liegen in
+`src/shared/` und sind mit Vitest getestet; die Worker-API wird mit Miniflare gegen eine
+lokale D1 getestet. Details: [CLAUDE.md](CLAUDE.md).
+
+## Lokal starten
+
+Voraussetzungen: Node.js 20 oder neuer (empfohlen 22) und npm.
+
+```sh
+npm ci
+cp .dev.vars.example .dev.vars        # lokale Werte, wird nicht committet
+npm run db:migrate:local              # lokale D1 (in .wrangler/) anlegen/migrieren
+npm run build                         # Frontend nach dist/client bauen
+npm run dev:worker                    # wrangler dev → http://localhost:8787
+```
+
+Lokal gibt es kein Cloudflare Access: Alle Anfragen laufen als `DEV_USER_EMAIL` aus
+`.dev.vars`. Für Strava lokal `STRAVA_CLIENT_SECRET` in `.dev.vars` eintragen und in den
+Strava-API-Einstellungen vorübergehend `localhost` als Callback-Domain setzen.
+
+Frontend mit Hot Reload: zusätzlich zu `npm run dev:worker` in einem zweiten Terminal
+`npm run dev` starten und http://localhost:5173 öffnen (API-Aufrufe gehen an den Worker).
+
+Prüfen:
+
+```sh
+npm test            # Vitest: Logik + Worker-API gegen lokale D1 (Migrationen werden angewendet)
+npm run typecheck   # TypeScript (Frontend, Worker, Tests)
+npm run build       # Produktions-Build inkl. Service Worker
+```
+
+## Einrichtung auf Cloudflare
+
+### 1. D1-Datenbank anlegen und migrieren
+
+```sh
+npx wrangler login
+npx wrangler d1 create foodtracker
+```
+
+Die ausgegebene `database_id` in `wrangler.toml` bei `[[d1_databases]]` eintragen und
+committen (die ID ist kein Geheimnis). Dann die Tabellen anlegen:
+
+```sh
+npm run db:migrate:remote
+```
+
+Neue Migrationen kommen als weitere Dateien in `migrations/` dazu; `npm run deploy`
+wendet sie vor jedem Deploy an.
+
+### 2. Secrets setzen
+
+Secrets nur über Wrangler (oder im Dashboard unter *Worker › Settings › Variables and
+Secrets* als Typ *Secret*), nie in `wrangler.toml`, im Code oder im Frontend:
+
+```sh
+npx wrangler secret put STRAVA_CLIENT_ID        # z. B. 298532
+npx wrangler secret put STRAVA_CLIENT_SECRET    # aus https://www.strava.com/settings/api
+npx wrangler secret put TOKEN_ENCRYPTION_KEY    # z. B. Ausgabe von: openssl rand -base64 32
+```
+
+`TOKEN_ENCRYPTION_KEY` verschlüsselt die Strava-Tokens (AES-GCM) in D1. Wird der Schlüssel
+geändert, muss Strava in den Einstellungen neu verbunden werden.
+
+Hinweis: Secrets lassen sich erst setzen, wenn der Worker existiert. Bei einem neuen Projekt
+also zuerst einmal deployen (Schritt 4), dann die Secrets setzen – Strava ist bis dahin in
+den Einstellungen als „nicht konfiguriert“ markiert.
+
+### 3. Strava-Callback-Domain
+
+In den [Strava-API-Einstellungen](https://www.strava.com/settings/api) unter
+**Authorization Callback Domain** die Domain der App eintragen – nur den Hostnamen, ohne
+`https://` und ohne Pfad, z. B. `foodtracker.example.com` oder
+`foodtracker.<dein-subdomain>.workers.dev`. Die App nutzt als Callback
+`https://<domain>/api/strava/callback`; Token-Austausch und Refresh laufen im Worker.
+
+### 4. Deploy über „Import a repository“
+
+1. Cloudflare-Dashboard › **Workers & Pages** › **Create** › **Import a repository**.
+2. GitHub verbinden und dieses Repository wählen.
+3. Einstellungen:
+   - **Production branch**: `web` (bzw. `main`, sobald der Branch gemergt ist)
+   - **Build command**: `npm run build`
+   - **Deploy command**: `npm run deploy` (wendet D1-Migrationen an, dann `wrangler deploy`)
+   - Root directory: leer lassen (Repository-Wurzel)
+4. Speichern und deployen. Jeder Push auf den Branch deployt automatisch; der Cron Trigger
+   aus `wrangler.toml` wird mit eingerichtet.
+
+Falls der Deploy-Schritt bei den Migrationen an fehlenden Rechten scheitert: dem API-Token
+der Builds (*Worker › Settings › Build › API token*) die Berechtigung **D1 Edit** geben –
+oder Migrationen lokal mit `npm run db:migrate:remote` ausführen und als Deploy-Befehl
+`npx wrangler deploy` verwenden.
+
+### 5. Cloudflare Access einrichten
+
+Ohne Access ist die App öffentlich – diesen Schritt nicht auslassen.
+
+**Variante A – eigene Domain (empfohlen):**
+1. *Worker › Settings › Domains & Routes* › **Custom domain** hinzufügen
+   (z. B. `foodtracker.example.com`; die Domain muss bei Cloudflare liegen).
+2. *Zero Trust › Access › Applications* › **Add an application** › **Self-hosted**:
+   Domain = deine App-Domain (ganze Domain, kein Pfad). Policy: **Allow**, Include
+   **Emails** = deine E-Mail-Adresse. Sitzungsdauer großzügig wählen (z. B. 1 Monat),
+   damit die App nicht ständig neu fragt.
+3. Die `workers.dev`-Adresse deaktivieren (*Domains & Routes* › workers.dev › Disable),
+   damit niemand die App an Access vorbei erreicht.
+
+**Variante B – nur workers.dev:** *Worker › Settings › Domains & Routes* › bei
+`workers.dev` **Cloudflare Access** aktivieren. Danach in *Zero Trust › Access ›
+Applications* die erzeugte App öffnen und die Policy auf deine E-Mail-Adresse beschränken.
+
+**In beiden Fällen** in der Access-Application den **Application Audience (AUD) Tag**
+kopieren und zusammen mit der Team-Domain (steht unter *Zero Trust › Settings*, Form
+`<team>.cloudflareaccess.com`) in `wrangler.toml` eintragen:
+
+```toml
+[vars]
+ACCESS_TEAM_DOMAIN = "deinteam.cloudflareaccess.com"
+ACCESS_AUD = "…aud-tag…"
+```
+
+Committen und pushen. Dann prüft der Worker bei jeder API-Anfrage das signierte Access-JWT
+und nutzt dessen E-Mail – ein gefälschter `Cf-Access-Authenticated-User-Email`-Header reicht
+nicht mehr. Ohne diese beiden Werte vertraut der Worker dem Header allein (nur sinnvoll,
+solange die App ausschließlich hinter Access erreichbar ist). Die Daten werden pro E-Mail
+getrennt gespeichert.
+
+### 6. Auf dem iPhone installieren
+
+1. Die App-Adresse in **Safari** öffnen und über Access anmelden.
+2. Teilen-Symbol › **Zum Home-Bildschirm** › Hinzufügen.
+3. Die App vom Home-Bildschirm starten: Sie läuft im Vollbild ohne Browserleiste.
+   Home-Bildschirm-Apps haben unter iOS einen eigenen Speicher – falls Access dort noch
+   einmal nach der Anmeldung fragt, einfach erneut anmelden.
+4. Einstellungen (Zahnrad im Ernährung-Tab) › **Connect Strava**. Die Strava-Anmeldung
+   öffnet sich in einem Browserfenster; danach „Fertig“ tippen – die App zeigt die
+   Verbindung, sobald sie wieder im Vordergrund ist. Optional unter *Activity History* den
+   kompletten Verlauf importieren.
+5. Beim ersten Barcode-Scan fragt iOS nach dem Kamerazugriff – erlauben.
+
+Schnellzugriffe: `https://<domain>/add?mode=barcode` (Scanner) oder `…/add?mode=label`
+(Etikett) in Safari öffnen und ebenfalls zum Home-Bildschirm hinzufügen.
+
+## Datenmodell (D1)
+
+| Tabelle | Inhalt |
+|---------|--------|
+| `users` | Nutzer pro Access-E-Mail |
+| `settings` | Ziele, Wochenbudget, Anteil aktiver kcal, Zeitzone |
+| `foods` | eigene Lebensmittel (pro 100 g, Barcode, Nutzungsstatistik) |
+| `food_entries` | Einträge mit **absoluten** Nährwerten (Bearbeiten eines Lebensmittels ändert keine Historie); `source` manual/barcode/label/ai, `is_estimated` |
+| `connections` | OAuth-Verbindungen pro Anbieter (Tokens verschlüsselt) |
+| `activities` | importierte Aktivitäten (`source` + `external_id`), aktive kcal, Distanz, Zeit, Höhenmeter, indoor |
+| `planned_sessions` | Trainingseinheiten (Tag, Reihenfolge, Sport, Status, Details als JSON, Strava-Verknüpfung) |
+| `workout_templates`, `week_templates` | Bibliothek und Wochenvorlagen |
+| `yearly_goals` | Jahresziele (km/Stunden) pro Sport-Filter |
+| `untracked_days` | Urlaubstage (nicht getrackt) |
+| `body_weights` | Gewicht pro Tag (kg), optional Körperfett (%) |
+| `backfill_state`, `rate_limits`, `oauth_states` | Historien-Import, API-Limits pro Anbieter, OAuth-State |
+
+## Projektstruktur
+
+```
+src/web/      React-App (Tabs Ernährung, Plan, Statistik), PWA
+src/worker/   Worker: Hono-API, Auth, D1-Zugriff, Strava, Cron
+src/shared/   reine Logik + API-Typen (Frontend und Worker)
+migrations/   D1-Migrationen
+test/worker/  API-Tests (Miniflare + lokale D1)
+public/       Icons, Favicon (OCR-Dateien werden beim Build nach public/ocr kopiert)
+```
