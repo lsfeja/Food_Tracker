@@ -43,6 +43,15 @@ export default defineConfig({
       workbox: {
         // App shell only; API data is cached by the client (TanStack Query persister).
         globPatterns: ["**/*.{js,css,html,svg,png,ico,webmanifest}"],
+        // OCR engine + language data (~15 MB) are cached on first use, not precached.
+        globIgnores: ["ocr/**"],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith("/ocr/"),
+            handler: "CacheFirst",
+            options: { cacheName: "ocr", expiration: { maxEntries: 10 } },
+          },
+        ],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

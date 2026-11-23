@@ -16,6 +16,21 @@ describe("nutrition label parser", () => {
     expect(r).toEqual({ kcal: 250, fat: 9.8, carbs: 30, protein: 8.5, kcalFromKilojoules: false });
   });
 
+  it("corrects Tesseract reading a trailing g as 9", () => {
+    // Rows as read by Tesseract.js from a German label photo (web OCR).
+    const r = parseLabelRows([
+      "Nährwerte pro 100 g Portion",
+      "Brennwert 1558 kJ / 372 KA kJ / 149 k«",
+      "Fett 7,09 2,89",
+      "davon gesättigte Fettsäuren 1,2 g 0,5g",
+      "Kohlenhydrate 58,749 23,59g",
+      "davon Zucker 0,79 03g",
+      "Eiweiß 13,59 5,49",
+      "Salz 0,02 g 0,01g",
+    ]);
+    expect(r).toEqual({ kcal: 372, fat: 7, carbs: 58.7, protein: 13.5, kcalFromKilojoules: true });
+  });
+
   it("parses an English label", () => {
     const r = parseLabelRows([
       "Nutrition per 100g",
@@ -79,9 +94,9 @@ describe("nutrition label parser", () => {
 
   it("tokenizes numbers with units", () => {
     expect(numbers("1046 kj / 250 kcal 13 % <0,5 g")).toEqual([
-      { value: 1046, unit: "kj" },
-      { value: 250, unit: "kcal" },
-      { value: 0.5, unit: "g" },
+      { value: 1046, unit: "kj", raw: "1046" },
+      { value: 250, unit: "kcal", raw: "250" },
+      { value: 0.5, unit: "g", raw: "0,5" },
     ]);
   });
 });

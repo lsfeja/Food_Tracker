@@ -73,6 +73,7 @@ const anyKeyword = new RegExp(
 interface NumberToken {
   value: number;
   unit: string | null;
+  raw: string;
 }
 
 const numberRegex = /(?<![\d.,])(<\s*)?(\d{1,5}(?:[.,]\d{1,3})?)\s*(kcal|kj|mg|µg|mcg|g|%)?/g;
@@ -84,7 +85,7 @@ export function numbers(text: string): NumberToken[] {
     const unit = match[3] ?? null;
     if (unit === "%") continue;
     const value = parseNumber(match[2], unit);
-    if (value !== null) tokens.push({ value, unit });
+    if (value !== null) tokens.push({ value, unit, raw: match[2] });
   }
   return tokens;
 }
@@ -183,6 +184,16 @@ function mainRowMatchEnd(pattern: string, row: string): number | null {
   return null;
 }
 
+/**
+ * Tesseract often reads "7,0 g" as "7,09" or "7,049" (the "g" becomes "9"/"49" and the
+ * space is lost). Labels print macros with at most one decimal, so a unitless
+ * "x,y9" / "x,y49" is "x,y g".
+ */
+function macroValue(token: NumberToken): number {
+  const misread = token.unit === null ? /^(\d+[.,]\d)4?9$/.exec(token.raw) : null;
+  return misread ? Number(misread[1].replace(",", ".")) : token.value;
+}
+
 export function macro(pattern: string, rows: string[], column: number): number | null {
   for (let index = 0; index < rows.length; index++) {
     const end = mainRowMatchEnd(pattern, rows[index]);
@@ -191,7 +202,7 @@ export function macro(pattern: string, rows: string[], column: number): number |
     if (tokens.length === 0 && index + 1 < rows.length && !anyKeyword.test(rows[index + 1])) {
       tokens = numbers(rows[index + 1]).filter((t) => t.unit === null || t.unit === "g");
     }
-    const value = pick(tokens.map((t) => t.value), column);
+    const value = pick(tokens.map(macroValue), column);
     if (value !== null && value <= 100) return value;
   }
   return null;
