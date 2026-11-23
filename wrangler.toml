@@ -2,6 +2,8 @@
 name = "foodtracker"
 main = "src/worker/index.ts"
 compatibility_date = "2025-10-01"
+# The app runs on foodtracker.<subdomain>.workers.dev (protected with Cloudflare Access).
+workers_dev = true
 # Version preview URLs would bypass a custom-domain Access application.
 preview_urls = false
 
