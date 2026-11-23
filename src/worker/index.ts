@@ -4,6 +4,7 @@ import { authenticate, userIdFor } from "./auth";
 import type { AppContext, Env } from "./env";
 import { nutrition } from "./routes/nutrition";
 import { off } from "./routes/off";
+import { scheduledSync, strava } from "./routes/strava";
 import { training } from "./routes/training";
 
 const app = new Hono<AppContext>().basePath("/api");
@@ -23,6 +24,7 @@ app.get("/me", (c) => c.json({ email: c.get("email") }));
 app.route("/", nutrition);
 app.route("/", off);
 app.route("/", training);
+app.route("/", strava);
 
 app.onError((error, c) => {
   if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
@@ -34,8 +36,9 @@ app.notFound((c) => c.json({ error: "Not found" }, 404));
 
 export default {
   fetch: app.fetch,
-  async scheduled(_controller: ScheduledController, _env: Env, _ctx: ExecutionContext) {
-    // Background jobs (Strava sync, history import) are added in a later step.
+  /** Cron (wrangler.toml): Strava sync for all connected users and history import. */
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(scheduledSync(env));
   },
 } satisfies ExportedHandler<Env>;
 

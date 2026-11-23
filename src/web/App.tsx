@@ -2,6 +2,7 @@ import { CloudOff } from "lucide-react";
 import { useEffect } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, ScrollRestoration, useNavigate, useSearchParams } from "react-router-dom";
 import { isDay } from "../shared/days";
+import { useActivitySync, useStravaStatus } from "./api/activity";
 import { useSettingsQuery, useUpdateSettings } from "./api/nutrition";
 import { TabBar } from "./components/TabBar";
 import { ToastProvider } from "./components/Toast";
@@ -20,6 +21,7 @@ import { StatsPage } from "./stats/StatsPage";
 function Layout() {
   const online = useOnline();
   useTimeZoneSync();
+  useAutoSync();
   return (
     <ToastProvider>
       <AddFoodProvider>
@@ -36,6 +38,20 @@ function Layout() {
       </AddFoodProvider>
     </ToastProvider>
   );
+}
+
+/** Strava sync when the app opens and returns to the foreground (at most every 10 min). */
+function useAutoSync() {
+  const sync = useActivitySync();
+  const status = useStravaStatus();
+  const connected = status.data?.connected === true;
+  useEffect(() => {
+    if (!connected) return;
+    const run = () => document.visibilityState === "visible" && void sync(false).catch(() => {});
+    run();
+    document.addEventListener("visibilitychange", run);
+    return () => document.removeEventListener("visibilitychange", run);
+  }, [connected, sync]);
 }
 
 /** Keeps the server's time zone (used for scheduled syncs) in line with the device. */

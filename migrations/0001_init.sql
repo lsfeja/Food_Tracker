@@ -127,13 +127,13 @@ CREATE TABLE backfill_state (
 -- API rate limits are per provider application, shared by all users.
 CREATE TABLE rate_limits (
   provider TEXT PRIMARY KEY,
-  window_start INTEGER NOT NULL DEFAULT 0,          -- epoch seconds, 15-min window
+  window_start INTEGER NOT NULL DEFAULT 0,          -- epoch ms, 15-min window
   window_count INTEGER NOT NULL DEFAULT 0,
-  day_start INTEGER NOT NULL DEFAULT 0,             -- epoch seconds, UTC day
+  day_start INTEGER NOT NULL DEFAULT 0,             -- epoch ms, UTC day
   day_count INTEGER NOT NULL DEFAULT 0,
   short_limit INTEGER NOT NULL DEFAULT 100,
   daily_limit INTEGER NOT NULL DEFAULT 1000,
-  blocked_until INTEGER NOT NULL DEFAULT 0
+  blocked_until INTEGER NOT NULL DEFAULT 0          -- epoch ms, 0 = not blocked
 );
 
 -- Training calendar. `details` is JSON (strength / endurance / general payload).

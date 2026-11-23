@@ -35,7 +35,7 @@ export function PlanPage() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const week = useWeek(start);
   const days = weekDays(start);
-  const offset = Math.round(diffDays(start, currentWeek) / 7);
+  const offset = Math.round(diffDays(currentWeek, start) / 7);
   const visibleDays = mode === "day" ? [days.includes(selectedDay) ? selectedDay : days[0]] : days;
 
   const title = offset === 0 ? "This Week" : offset === 1 ? "Next Week" : offset === -1 ? "Last Week" : weekLabel(start);
