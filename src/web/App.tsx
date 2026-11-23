@@ -19,6 +19,7 @@ import { Spinner } from "./components/ui";
 
 // Chart-heavy screens are loaded on demand.
 const HistoryPage = lazy(() => import("./nutrition/HistoryPage").then((m) => ({ default: m.HistoryPage })));
+const WeightPage = lazy(() => import("./nutrition/WeightPage").then((m) => ({ default: m.WeightPage })));
 const StatsPage = lazy(() => import("./stats/StatsPage"));
 const ExerciseListPage = lazy(() => import("./stats/StrengthSection").then((m) => ({ default: m.ExerciseListPage })));
 const ExerciseDetailPage = lazy(() => import("./stats/StrengthSection").then((m) => ({ default: m.ExerciseDetailPage })));
@@ -100,6 +101,7 @@ const router = createBrowserRouter([
       { path: "/day/:day", element: <DayPage /> },
       { path: "/history", element: <HistoryPage /> },
       { path: "/settings", element: <SettingsPage /> },
+      { path: "/weight", element: <WeightPage /> },
       { path: "/add", element: <AddRoute /> },
       { path: "/plan", element: <PlanPage /> },
       { path: "/plan/session/:id", element: <SessionDetailPage /> },

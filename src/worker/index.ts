@@ -7,6 +7,7 @@ import { off } from "./routes/off";
 import { stats } from "./routes/stats";
 import { scheduledSync, strava } from "./routes/strava";
 import { training } from "./routes/training";
+import { weight } from "./routes/weight";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -27,6 +28,7 @@ app.route("/", off);
 app.route("/", training);
 app.route("/", strava);
 app.route("/", stats);
+app.route("/", weight);
 
 app.onError((error, c) => {
   if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);

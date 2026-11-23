@@ -63,6 +63,14 @@ export interface DayDTO {
   totals: Record<Day, DayTotals>;
 }
 
+/** Body weight of one day (one value per day). */
+export interface WeightDTO {
+  day: Day;
+  weightKg: number;
+  /** Body fat in % (null = not measured). */
+  bodyFatPct: number | null;
+}
+
 export interface SessionDTO {
   id: string;
   day: Day;

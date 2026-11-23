@@ -33,6 +33,10 @@ describe("formatting", () => {
     expect(Format.signedKcal(-120)).toBe("−120");
     expect(Format.volume(12_400)).toBe("12.4");
     expect(Format.volumeUnit(9_999)).toBe("kg");
+    expect(Format.oneDecimal(72)).toBe("72.0");
+    expect(Format.signedOneDecimal(-0.34)).toBe("−0.3");
+    expect(Format.signedOneDecimal(0.25)).toBe("+0.3");
+    expect(Format.signedOneDecimal(-0.04)).toBe("0.0");
   });
 });
 

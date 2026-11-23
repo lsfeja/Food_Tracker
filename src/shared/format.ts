@@ -26,6 +26,19 @@ export function signedKcal(value: number): string {
   return "0";
 }
 
+/** Body weight / body fat with one decimal: "72.4" */
+export function oneDecimal(value: number): string {
+  return fmt(value, 1, 1);
+}
+
+/** "+0.4" / "−0.3" / "0.0" (one decimal) */
+export function signedOneDecimal(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  if (rounded > 0) return `+${fmt(rounded, 1, 1)}`;
+  if (rounded < 0) return `−${fmt(-rounded, 1, 1)}`;
+  return fmt(0, 1, 1);
+}
+
 /** Grams: one decimal below 10 g, whole numbers above. */
 export function grams(value: number): string {
   return Math.abs(value) < 10 ? fmt(value, 1) : fmt(Math.round(value));

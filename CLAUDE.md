@@ -73,6 +73,7 @@ src/worker/
   routes/training.ts   sessions, move/duplicate/link, library, week templates
   routes/strava.ts     OAuth connect/callback, status, sync, backfill, disconnect, cron
   routes/stats.ts      stats snapshots, data range, yearly goals
+  routes/weight.ts     body weight per day (+ optional body fat): list, put, delete
   strava/client.ts     config, token exchange/refresh, authorized GET, models, kJ fallback
   strava/rateLimiter.ts D1 counter per provider (shared by all users), headers, 429
   strava/sync.ts       14-day window + catch-up (max 60 days), detail per new activity
@@ -93,6 +94,7 @@ src/web/
                         usePersistentState, theme, useThemeColors, ocr (Tesseract)
   nutrition/            NutritionHome/DayPage, DayDashboard, DayWidgets, EditEntrySheet,
                         HistoryPage, SettingsPage, ActivitySettingsSection,
+                        WeightSection (Today row) / WeightSheet / WeightPage (/weight),
                         add/ (AddFoodSheet stack: search, portion, food editor, quick add),
                         scan/ (BarcodeScreen with ZXing, LabelScreen with OCR)
   plan/                 PlanPage (week strip, menu), WeekList (dnd-kit), SessionRow,
@@ -102,7 +104,7 @@ src/web/
   styles/global.css     the whole design system (CSS variables, light/dark)
 ```
 
-Routes: `/`, `/day/:day`, `/history`, `/settings`, `/add?mode=search|barcode|label&day=`,
+Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|barcode|label&day=`,
 `/plan?week=`, `/plan/session/:id`, `/plan/library`, `/plan/templates[/:id]`, `/stats`,
 `/stats/exercises`, `/stats/exercise/:key`. The tab bar remembers each tab's last location.
 
@@ -121,6 +123,9 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/add?mode=search|barcode|lab
   week. Limits: day ≥ max(base + 25 % A, base + A − max daily deficit), rest day ≥ base +
   rest-day % of A; cuts that don't fit carry over by `carry_over_pct`. Days without entries
   count as not logged. Computed on the client from `totals` reaching back `inputStart(day)`.
+- Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces), optional
+  body fat; trailing 7-day average and kg/week (least-squares over 28 days). It doesn't change
+  the budget.
 - Vacation days (`untracked_days`, flag `untracked` in `totals`) are skipped by the budget,
   the active average and nutrition stats; activities on them still count for sport stats.
 - Sports (`SPORTS`/`sportInfo` in `shared/workout.ts`): `race` is plannable with general
@@ -179,7 +184,7 @@ need defaults. Tests apply all migrations to a fresh local D1 (`test/worker/setu
 - Metric units only (g, kcal, km, kg); format with `src/shared/format.ts`, parse decimals
   with `parseDecimal` (accepts `,` and `.`).
 - Mutations invalidate the affected query keys (`day`, `totals`, `foods`, `plan`, `stats`,
-  `strava`, `library`, `weekTemplates`, `goals`); use optimistic updates for taps that must
+  `strava`, `library`, `weekTemplates`, `goals`, `weights`); use optimistic updates for taps that must
   feel instant (tick off, delete, drag & drop).
 - Keep components small; speed of logging beats feature count. Commit in small, working
   steps with clear messages.
