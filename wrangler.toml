@@ -29,8 +29,8 @@ crons = ["*/30 * * * *"]
 # Cloudflare Access (Zero Trust › Access › Applications › your app):
 # team domain like "yourteam.cloudflareaccess.com" and the Application Audience (AUD) tag.
 # When both are set, every API request must carry a valid Access JWT.
-ACCESS_TEAM_DOMAIN = ""
-ACCESS_AUD = ""
+ACCESS_TEAM_DOMAIN = "lucas-feja.cloudflareaccess.com"
+ACCESS_AUD = "a01f96ecc52d7cbbab7919aa09470fd7016d8241264c25e7a758624bf8264248"
 
 # Secrets (never put them here): set with `npx wrangler secret put <NAME>`
 #   STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY
