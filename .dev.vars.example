@@ -1,5 +1,8 @@
 # Copy to .dev.vars for `wrangler dev` (gitignored). Never commit real values.
 DEV_USER_EMAIL=dev@example.com
+# No Cloudflare Access locally: disable the JWT check configured in wrangler.toml.
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=
 STRAVA_CLIENT_ID=298532
 STRAVA_CLIENT_SECRET=your-strava-client-secret
 # Any long random string, e.g. `openssl rand -base64 32`

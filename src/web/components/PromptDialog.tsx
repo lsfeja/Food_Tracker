@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useScrollLock, useVisualViewport } from "./Sheet";
 
 /** iOS-style alert with one text field. */
 export function PromptDialog({
@@ -20,6 +21,8 @@ export function PromptDialog({
   onClose: () => void;
 }) {
   const [value, setValue] = useState("");
+  useScrollLock();
+  useVisualViewport();
   const submit = () => {
     if (!value.trim()) return;
     onClose();

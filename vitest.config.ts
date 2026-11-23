@@ -19,6 +19,9 @@ export default defineConfig({
             miniflare: {
               bindings: {
                 TEST_MIGRATIONS: await readD1Migrations("./migrations"),
+                // Production verifies the Access JWT (wrangler.toml); tests use the header/dev fallback.
+                ACCESS_TEAM_DOMAIN: "",
+                ACCESS_AUD: "",
                 DEV_USER_EMAIL: "test@example.com",
                 STRAVA_CLIENT_ID: "298532",
                 STRAVA_CLIENT_SECRET: "test-secret",

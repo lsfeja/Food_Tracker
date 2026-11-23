@@ -83,7 +83,12 @@ body {
   overflow-x: hidden;
 }
 
+/* Pinned while an overlay is open (top offset set in Sheet.tsx). */
 body.scroll-locked {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -816,7 +821,7 @@ input[type="range"] {
 
 .sheet-backdrop {
   position: fixed;
-  inset: 0;
+  inset: -100px 0;
   z-index: 50;
   background: var(--backdrop);
   animation: fade-in 0.2s ease;
@@ -826,8 +831,9 @@ input[type="range"] {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  top: calc(var(--safe-top) + 10px);
+  /* Follows the visible area (above the keyboard); falls back to the full screen. */
+  top: calc(var(--vv-top, 0px) + var(--safe-top) + 10px);
+  height: calc(var(--vv-height, 100dvh) - var(--safe-top) - 10px);
   z-index: 51;
   background: var(--sheet-bg);
   border-radius: 12px 12px 0 0;
@@ -840,7 +846,8 @@ input[type="range"] {
 }
 
 .sheet.full {
-  top: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-height, 100dvh);
   border-radius: 0;
 }
 
@@ -1170,7 +1177,8 @@ input[type="range"] {
 .alert {
   position: fixed;
   left: 50%;
-  top: 30%;
+  /* Centered in the visible area above the keyboard. */
+  top: calc(var(--vv-top, 0px) + var(--vv-height, 100dvh) * 0.4);
   transform: translate(-50%, -50%);
   z-index: 61;
   width: 270px;
