@@ -1,11 +1,11 @@
 import { distance as fmtDistance, duration as fmtDuration, shortDistance, shortMinutes } from "./format";
 
 export type SportCategory = "strength" | "endurance" | "other";
-export type SportType = "strength" | "run" | "ride" | "indoorRide" | "swim" | "mobility" | "yoga" | "rest" | "custom";
+export type SportType = "strength" | "run" | "ride" | "indoorRide" | "swim" | "race" | "mobility" | "yoga" | "rest" | "custom";
 export type MatchGroup = "running" | "cycling" | "swimming" | "strength" | "yoga" | "mobility";
 export type SessionStatus = "planned" | "done" | "skipped";
 
-export const SPORTS: SportType[] = ["strength", "run", "ride", "indoorRide", "swim", "mobility", "yoga", "rest", "custom"];
+export const SPORTS: SportType[] = ["strength", "run", "ride", "indoorRide", "swim", "race", "mobility", "yoga", "rest", "custom"];
 
 export const sportInfo: Record<SportType, { name: string; category: SportCategory; matchGroup: MatchGroup | null; emoji: string }> = {
   strength: { name: "Strength", category: "strength", matchGroup: "strength", emoji: "🏋️" },
@@ -13,6 +13,10 @@ export const sportInfo: Record<SportType, { name: string; category: SportCategor
   ride: { name: "Ride", category: "endurance", matchGroup: "cycling", emoji: "🚴" },
   indoorRide: { name: "Indoor Ride", category: "endurance", matchGroup: "cycling", emoji: "🚲" },
   swim: { name: "Swim", category: "endurance", matchGroup: "swimming", emoji: "🏊" },
+  // Race (Wettkampf): only plannable for now (duration, notes). Race-specific details
+  // (discipline, distance, target time, effect on the budget) can become their own
+  // WorkoutDetails kind later; stored sessions keep working thanks to the lenient parser.
+  race: { name: "Race", category: "other", matchGroup: null, emoji: "🏁" },
   mobility: { name: "Mobility", category: "other", matchGroup: "mobility", emoji: "🤸" },
   yoga: { name: "Yoga", category: "other", matchGroup: "yoga", emoji: "🧘" },
   rest: { name: "Rest Day", category: "other", matchGroup: null, emoji: "😴" },

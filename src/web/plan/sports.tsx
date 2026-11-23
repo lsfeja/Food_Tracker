@@ -1,4 +1,4 @@
-import { Bike, BedDouble, Dumbbell, Flower2, Footprints, type LucideIcon, PersonStanding, Star, Waves, Zap } from "lucide-react";
+import { Bike, BedDouble, Dumbbell, Flag, Flower2, Footprints, type LucideIcon, PersonStanding, Star, Waves, Zap } from "lucide-react";
 import type { SportType } from "../../shared/workout";
 
 const icons: Record<SportType, LucideIcon> = {
@@ -7,6 +7,7 @@ const icons: Record<SportType, LucideIcon> = {
   ride: Bike,
   indoorRide: Zap,
   swim: Waves,
+  race: Flag,
   mobility: PersonStanding,
   yoga: Flower2,
   rest: BedDouble,

@@ -5,6 +5,7 @@ import { instantiateTemplate, reorder, templateFromWeek, type TemplateSession } 
 import {
   changeSport,
   detailsSummary,
+  displayTitle,
   type ExerciseEntry,
   type ExerciseSet,
   newBlock,
@@ -12,7 +13,9 @@ import {
   newStep,
   parseContent,
   parseDetails,
+  isSport,
   resettingProgress,
+  SPORTS,
   sportFromActivityType,
   structureSummary,
   type WorkoutContent,
@@ -186,3 +189,20 @@ describe("exercise history", () => {
     expect(knownNames([record("2025-11-10", [exercise("bench press", []), exercise("Dips", [])]), record("2025-11-14", [exercise("Bench Press", [])])])).toEqual(["Bench Press", "Dips"]);
   });
 });
+
+describe("race sessions", () => {
+  it("are a plannable sport with simple details for now", () => {
+    expect(isSport("race")).toBe(true);
+    expect(SPORTS).toContain("race");
+    const content = newContent("race", "City Marathon");
+    expect(content.details.kind).toBe("general");
+    expect(displayTitle(content)).toBe("City Marathon");
+    expect(displayTitle(newContent("race"))).toBe("Race");
+    // Stored race sessions parse leniently (future fields are ignored for now).
+    expect(parseContent({ sport: "race", title: "", details: { kind: "general", durationMinutes: 240, notes: "", targetTime: 14400 } })?.details).toMatchObject({
+      kind: "general",
+      durationMinutes: 240,
+    });
+  });
+});
+

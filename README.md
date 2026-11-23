@@ -40,7 +40,7 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
   **Drag & Drop** (lange drücken) zwischen Tagen.
 - Details je Sportart: Kraft (Sätze × Wdh. × Gewicht, Ist-Werte, „letztes Mal“,
   Pausentimer, neue Bestwerte), Ausdauer (Dauer, Distanz, Zonen/RPE, Intervalle),
-  Mobility/Yoga/Ruhetag/Eigene (Notizen, Dauer). Krafttraining bleibt in der App
+  Mobility/Yoga/Ruhetag/Eigene (Notizen, Dauer), **Race** (Wettkampf, vorerst nur planbar). Krafttraining bleibt in der App
   (kein Upload zu Strava).
 - Workout-Bibliothek (Kopie beim Einplanen), Wochenvorlagen (Woche speichern, Vorlage mit
   Vorschau laden: hinzufügen oder ersetzen – erledigte Einheiten bleiben).

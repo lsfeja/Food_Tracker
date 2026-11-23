@@ -53,6 +53,13 @@ describe("plan sessions", () => {
     expect(week.data.sessions.find((s) => s.id === b.data.id)?.position).toBe(0);
   });
 
+  it("plans race sessions", async () => {
+    const call = api("race@example.com");
+    const race = await call<SessionDTO>("POST", "/sessions", { day: "2026-04-26", content: { sport: "race", title: "Marathon", details: { kind: "general", durationMinutes: 240, notes: "" } } });
+    expect(race.status).toBe(201);
+    expect(race.data).toMatchObject({ sport: "race", title: "Marathon", details: { kind: "general", durationMinutes: 240 } });
+  });
+
   it("ticks off and skips sessions", async () => {
     const call = api("status@example.com");
     const s = await call<SessionDTO>("POST", "/sessions", { day: "2026-03-10", content: ride });
