@@ -15,7 +15,8 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 **Ernährung**
 - **Wochenbudget** (V3): Wochenplan = (Grundumsatz + Ø Aktivkalorien der letzten 4 Wochen) × 7;
   im Schnitt zählt die Vorwoche doppelt (Gewichtung 2 : 1 : 1 : 1 pro Tag).
-  Mehr Training als im Schnitt füllt den Rest der Woche auf (mindestens 3 Tage), weniger kürzt
+  Mehr Training als im Schnitt füllt den Rest der Woche auf (mindestens 3 Tage, auch über die
+  Wochengrenze; der Bonus kommt oben auf das Tagesminimum und wird nicht weggekürzt), weniger kürzt
   die Folgetage; Ruhetage aus dem Plan sind geschützt, die Tage haben eine Untergrenze (max.
   Defizit pro Tag einstellbar). Gegessenes über/unter dem Tagesziel wandert auf die Folgetage und
   in die nächste Woche; nicht unterzubringende Kürzungen nur anteilig (Standard 70 %).

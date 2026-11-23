@@ -67,7 +67,14 @@ export function MacroBar({ title, value, target, secondary }: { title: string; v
 /** Weekly budget: what's left this week, the plan and how far activity filled it up. */
 export function WeekBudgetView({ week }: { week: WeekSummary }) {
   const over = week.remaining < 0;
-  const carry = week.carryIn + week.spillIn;
+  // Why the week's total differs from the plan.
+  const changes = [
+    { label: "From last week", value: week.changes.carry },
+    { label: "Weekend bonus", value: week.changes.bonus },
+    { label: "Activity", value: week.changes.activity },
+    { label: "Food", value: week.changes.food },
+    { label: "Minimums", value: week.changes.limits },
+  ].filter((c) => Math.abs(c.value) >= 1);
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="row">
@@ -86,7 +93,19 @@ export function WeekBudgetView({ week }: { week: WeekSummary }) {
       <div className="caption secondary tabular" style={{ lineHeight: "17px" }}>
         Plan {Format.kcal(week.plan)} · Ø active {Format.kcal(week.params.average)}/day
         {week.filledPlan > 0 && ` · filled ${Format.kcal(week.filled)} of ${Format.kcal(week.filledPlan)}`}
-        {Math.abs(carry) >= 1 && ` · from last week ${Format.signedKcal(carry)}`}
+        {changes.length > 0 && (
+          <>
+            <br />
+            {changes.map((c, i) => (
+              <span key={c.label}>
+                {i > 0 && " · "}
+                <span style={{ whiteSpace: "nowrap" }}>
+                  {c.label} {Format.signedKcal(c.value)}
+                </span>
+              </span>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

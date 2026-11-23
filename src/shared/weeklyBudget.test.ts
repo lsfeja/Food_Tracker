@@ -136,6 +136,70 @@ describe("weekly budget: filling up", () => {
   });
 });
 
+describe("weekly budget: weekend bonus across the week boundary", () => {
+  // Reported case: Sunday 22 Nov 2026 with 1,715 kcal (A of that week 445, surplus 1,270),
+  // Monday 23 Nov is a rest day without activity, plan of the new week 17,118.
+  const SUNDAY = "2026-11-22";
+  const MONDAY = "2026-11-23";
+  const TUESDAY = "2026-11-24";
+  const LAST_MONDAY = "2026-11-16";
+  const userConfig = config({ baseKcal: 2200, goalKcal: -200 });
+
+  function scenario(): Record<Day, BudgetDayInput> {
+    const inputs: Record<Day, BudgetDayInput> = {};
+    for (let d = addDays(LAST_MONDAY, -7 * 14); d < LAST_MONDAY; d = addDays(d, 1)) inputs[d] = { eaten: 0, active: 445 };
+    // Little activity Mon–Sat (that's why the new A stays at ~445 and cuts carry over).
+    for (let i = 0; i < 6; i++) inputs[addDays(LAST_MONDAY, i)] = { eaten: 0, active: 234.6 };
+    inputs[SUNDAY] = { eaten: 0, active: 1715 };
+    inputs[MONDAY] = { eaten: 0, active: 0, restDay: true };
+    return inputs;
+  }
+
+  it("Sunday's surplus lands on Sun, Mon and Tue, on top of the rest-day minimum", () => {
+    const result = simulateBudget(scenario(), userConfig, MONDAY, LAST_MONDAY, MONDAY);
+    const last = result.weeks[LAST_MONDAY];
+    const week = result.weeks[MONDAY];
+    const share = (1715 - 445) / 3;
+    expect(last.params.average).toBeCloseTo(445);
+    expect(week.plan).toBeCloseTo(17118, 0);
+
+    // 1. The weekend surplus is written into the new week and read there.
+    expect(week.spillIn).toBeCloseTo(2 * share);
+    expect(week.changes.bonus).toBeCloseTo(2 * share);
+
+    // 2. Rest-day minimum and bonus add up; the rest day's own missing activity can't eat it.
+    expect(result.days[MONDAY].target).toBeCloseTo(week.params.restMinimum + share);
+    expect(result.days[MONDAY].target).toBeCloseTo(2957.4, 0);
+    expect(result.days[MONDAY].minimum).toBeCloseTo(week.params.restMinimum + share);
+    expect(result.days[TUESDAY].target).toBeGreaterThanOrEqual(week.params.floor + share - 1e-6);
+    // Sunday itself got its share (its minimum rose with it).
+    expect(result.days[SUNDAY].minimum).toBeCloseTo(last.params.floor + share);
+
+    // 3. Where the difference to the plan comes from: total = plan + each change.
+    const { carry, bonus, activity, food, limits } = week.changes;
+    expect(week.total).toBeCloseTo(week.plan + carry + bonus + activity + food + limits);
+    // Last week's cuts that didn't fit (70 %) …
+    expect(carry).toBeCloseTo(week.carryIn);
+    expect(carry).toBeLessThan(0);
+    // … and the rest day without activity: −A, what doesn't fit moves on (70 %).
+    expect(activity + week.unplaced).toBeCloseTo(-week.params.average);
+    expect(week.carryOut).toBeCloseTo(week.unplaced * 0.7);
+  });
+
+  it("extra activity within the week is protected from later cuts too", () => {
+    // Wed +600 → Wed–Sun +120; Thursday 2,000 over target: Fri–Sun only down to floor + 120.
+    const inputs = week({ [WED]: { active: 1100 }, [THU]: { eaten: 3020 + 2000 } });
+    const result = run(inputs, FRI);
+    for (const d of [FRI, SAT, SUN]) {
+      expect(result.days[d].target).toBeCloseTo(2525 + 120);
+      expect(result.days[d].minimum).toBeCloseTo(2525 + 120);
+    }
+    expect(result.weeks[MON].unplaced).toBeCloseTo(-(2000 - 3 * 375));
+    expect(result.weeks[MON].changes.food).toBeCloseTo(-3 * 375);
+    expect(result.weeks[MON].changes.activity).toBeCloseTo(600);
+  });
+});
+
 describe("weekly budget: food", () => {
   it("eating less moves to the following days, eating more cuts them", () => {
     const less = run(week({ [MON]: { eaten: 2200 } }), TUE);

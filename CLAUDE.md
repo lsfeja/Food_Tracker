@@ -118,12 +118,16 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|
 - Budget (V3, `shared/weeklyBudget.ts`, pure, heavily tested): week plan = (base + A) × 7 +
   slider, A = 4-week average of counted active kcal (Strava × 50–100 %), each day of the
   previous week weighted double (`PREVIOUS_WEEK_WEIGHT`). Activity above A
-  is added to that day and the rest of the week (at least 3 days, crossing into next week);
+  is added to that day and the rest of the week (at least 3 days, crossing into next week),
+  raising each receiving day's target and minimum alike (rest day = rest-day minimum + bonus;
+  later cuts can't eat it);
   activity below A cuts the following days (rest days from the plan: from the day itself).
   Food above/below a finished day's target moves to the following days and into the next
   week. Limits: day ≥ max(base + 25 % A, base + A − max daily deficit), rest day ≥ base +
   rest-day % of A; cuts that don't fit carry over by `carry_over_pct`. Days without entries
   count as not logged. Computed on the client from `totals` reaching back `inputStart(day)`.
+  `WeekSummary.changes` books every step (carry, bonus, activity, food, limits): total = plan +
+  their sum; the week card shows it.
 - Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces), optional
   body fat; trailing 7-day average and kg/week (least-squares over 28 days). It doesn't change
   the budget.

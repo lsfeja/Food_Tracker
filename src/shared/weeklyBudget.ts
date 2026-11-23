@@ -7,7 +7,9 @@
  *   T = N + goal (slider). Weekly plan = T × tracked days.
  * - Activity deviation of a day (actual − A):
  *   - more: added at once to that day and the rest of the week, spread over at least
- *     3 tracked days (Sat → Sat, Sun, Mon; Sun → Sun, Mon, Tue), never further;
+ *     3 tracked days (Sat → Sat, Sun, Mon; Sun → Sun, Mon, Tue), never further. The share
+ *     raises the receiving day's target AND its minimum (the extra activity raises that
+ *     day's demand), so later cuts never eat it: rest day → rest-day minimum + share;
  *   - less: on a rest day from the start of the day over that day and the rest of the
  *     week, on other days only after the day ended, over the following days.
  * - Food: what is eaten below/above a finished day's target moves to the following days
@@ -110,6 +112,21 @@ export interface WeekSummary {
   carryOut: number;
   /** Cuts that didn't fit (before the carry-over share). */
   unplaced: number;
+  /** How `total` differs from `plan`: total = plan + the sum of these. */
+  changes: WeekChanges;
+}
+
+export interface WeekChanges {
+  /** Balance carried in from the previous week (food, 70 % of cuts that didn't fit). */
+  carry: number;
+  /** Extra activity of the previous weekend (Sat/Sun → Mon/Tue). */
+  bonus: number;
+  /** This week's activity above/below A (incl. rest days without activity). */
+  activity: number;
+  /** Food below/above the target of finished days, moved to the following days. */
+  food: number;
+  /** Rest-day minimums above the standard target that the other days couldn't cover. */
+  limits: number;
 }
 
 export interface BudgetResult {
@@ -197,21 +214,40 @@ function simulateWeek(
   let unplaced = 0; // cuts that didn't fit (negative)
   let extraCarry = 0; // food left over at the end of the week (positive)
   const spillOut: Record<Day, number> = {};
+  const changes: WeekChanges = { carry: 0, bonus: 0, activity: 0, food: 0, limits: 0 };
+  const sum = () => tracked.reduce((total, d) => total + target[d], 0);
+  /** Runs `step` and books its effect on the week total under `kind`. */
+  const book = (kind: keyof WeekChanges, step: () => void) => {
+    const before = sum();
+    step();
+    changes[kind] += sum() - before;
+  };
+  /** Extra activity: raises target and minimum alike (protected from later cuts). */
+  const addBonus = (d: Day, amount: number) => {
+    target[d] += amount;
+    minimum[d] += amount;
+  };
 
   // Rest-day minimum above the standard target (large slider): take it from the other days.
-  let raised = 0;
-  for (const d of tracked) {
-    if (target[d] < minimum[d]) {
-      raised += minimum[d] - target[d];
-      target[d] = minimum[d];
+  book("limits", () => {
+    let raised = 0;
+    for (const d of tracked) {
+      if (target[d] < minimum[d]) {
+        raised += minimum[d] - target[d];
+        target[d] = minimum[d];
+      }
     }
-  }
-  if (raised > 0) unplaced += distribute(-raised, tracked.filter((d) => target[d] > minimum[d] + EPS));
+    if (raised > 0) unplaced += distribute(-raised, tracked.filter((d) => target[d] > minimum[d] + EPS));
+  });
 
   // Carried balance from the previous week, spread over the whole week.
-  unplaced += Math.min(distribute(state.carryIn, tracked), 0);
-  // Extra activity of the previous weekend.
-  for (const [d, amount] of Object.entries(state.spillIn)) if (d in target) target[d] += amount;
+  book("carry", () => {
+    unplaced += Math.min(distribute(state.carryIn, tracked), 0);
+  });
+  // Extra activity of the previous weekend: on top of those days' minimums.
+  book("bonus", () => {
+    for (const [d, amount] of Object.entries(state.spillIn)) if (d in target) addBonus(d, amount);
+  });
 
   const after = (d: Day) => tracked.filter((x) => x > d);
   const fromDay = (d: Day) => tracked.filter((x) => x >= d);
@@ -236,27 +272,31 @@ function simulateWeek(
     const active = countedActive(input?.active ?? 0, config);
     const deviation = active - params.average;
 
-    if (deviation > EPS) {
-      const window = surplusWindow(d);
-      const share = deviation / window.length;
-      for (const x of window) {
-        if (x in target) target[x] += share;
-        else spillOut[x] = (spillOut[x] ?? 0) + share;
+    book("activity", () => {
+      if (deviation > EPS) {
+        const window = surplusWindow(d);
+        const share = deviation / window.length;
+        for (const x of window) {
+          if (x in target) addBonus(x, share);
+          else spillOut[x] = (spillOut[x] ?? 0) + share;
+        }
+      } else if (deviation < -EPS) {
+        if (input?.restDay) unplaced += distribute(deviation, fromDay(d));
+        else if (complete) unplaced += distribute(deviation, after(d));
       }
-    } else if (deviation < -EPS) {
-      if (input?.restDay) unplaced += distribute(deviation, fromDay(d));
-      else if (complete) unplaced += distribute(deviation, after(d));
-    }
+    });
 
     if (complete && (input?.eaten ?? 0) > 0) {
-      const balance = target[d] - input!.eaten;
-      const following = after(d);
-      if (balance > 0) {
-        if (following.length) distribute(balance, following);
-        else extraCarry += balance;
-      } else {
-        unplaced += distribute(balance, following);
-      }
+      book("food", () => {
+        const balance = target[d] - input!.eaten;
+        const following = after(d);
+        if (balance > 0) {
+          if (following.length) distribute(balance, following);
+          else extraCarry += balance;
+        } else {
+          unplaced += distribute(balance, following);
+        }
+      });
     }
   }
 
@@ -307,6 +347,7 @@ function simulateWeek(
       daysRemaining: todayIndex.length,
       carryOut,
       unplaced,
+      changes,
     },
     next: { carryIn: carryOut, spillIn: spillOut },
   };
