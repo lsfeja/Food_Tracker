@@ -7,10 +7,10 @@ import type { UserSettings } from "./settings";
 const n = (kcal: number, protein = 0) => ({ kcal, protein, carbs: 0, fat: 0 });
 const totals = (kcal: number, active = 0, extra: Partial<DayTotals> = {}): DayTotals => ({ eaten: n(kcal), activeCalories: active, ...extra });
 
-function settings(o: { kcal?: number; active?: boolean; percent?: number } = {}): UserSettings {
+function settings(o: { kcal?: number; active?: boolean; percent?: number; goal?: number } = {}): UserSettings {
   return {
     targets: { kcal: o.kcal ?? 2000, protein: 150, carbs: 200, fat: 70 },
-    budget: { activeCaloriesEnabled: o.active ?? true, activeCaloriesPercent: o.percent ?? 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70 },
+    budget: { activeCaloriesEnabled: o.active ?? true, activeCaloriesPercent: o.percent ?? 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: o.goal ?? 0 },
     timezone: "UTC",
   };
 }
@@ -44,6 +44,13 @@ describe("budget", () => {
   it("applies the counted share and can ignore activity", () => {
     expect(budgetFor(monday, settings({ percent: 50 }), history(400), monday).calories.total).toBeCloseTo(2200);
     expect(budgetFor(monday, settings({ active: false }), history(400), monday).calories.total).toBe(2000);
+  });
+
+  it("applies the goal slider within the floor", () => {
+    // base 2000 + Ø 400: floor = 2000 + 100 → the deficit is limited to −300.
+    expect(budgetFor(monday, settings({ goal: -200 }), history(400), monday).calories.total).toBeCloseTo(2200);
+    expect(budgetFor(monday, settings({ goal: -500 }), history(400), monday).calories.total).toBeCloseTo(2100);
+    expect(budgetFor(monday, settings({ goal: 250 }), history(400), monday).calories.total).toBeCloseTo(2650);
   });
 
   it("protects rest days read from the plan", () => {

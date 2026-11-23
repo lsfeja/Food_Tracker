@@ -26,6 +26,7 @@ export function settingsFromRow(row: Row | null): UserSettings {
       restDayActivePct: n(row?.rest_day_active_pct ?? 75),
       maxDailyDeficit: n(row?.max_daily_deficit ?? 700),
       carryOverPct: n(row?.carry_over_pct ?? 70),
+      goalKcal: n(row?.goal_kcal ?? 0),
     },
     timezone: String(row?.timezone ?? "Europe/Berlin"),
   };

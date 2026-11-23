@@ -18,6 +18,8 @@ export interface BudgetSettings {
   maxDailyDeficit: number;
   /** Share of cuts that don't fit into the week and move to the next one. */
   carryOverPct: number;
+  /** Goal slider: negative = deficit (lose fat), positive = surplus (build mass), kcal/day. */
+  goalKcal: number;
 }
 
 export interface UserSettings {
@@ -28,14 +30,14 @@ export interface UserSettings {
 
 export const defaultSettings = (): UserSettings => ({
   targets: { kcal: 2200, protein: 140, carbs: 220, fat: 70 },
-  budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70 },
+  budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: 0 },
   timezone: "Europe/Berlin",
 });
 
 export function budgetConfig(settings: Pick<UserSettings, "targets" | "budget">): BudgetConfig {
   return {
     baseKcal: settings.targets.kcal,
-    goalKcal: 0,
+    goalKcal: settings.budget.goalKcal ?? 0,
     activeEnabled: settings.budget.activeCaloriesEnabled,
     activePercent: settings.budget.activeCaloriesPercent,
     restDayActivePct: settings.budget.restDayActivePct,

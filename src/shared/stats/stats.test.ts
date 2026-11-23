@@ -232,7 +232,7 @@ describe("plan stats", () => {
 describe("nutrition stats", () => {
   const settings: UserSettings = {
     targets: { kcal: 2000, protein: 150, carbs: 200, fat: 70 },
-    budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70 },
+    budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: 0 },
     timezone: "UTC",
   };
   const t = (kcal: number, protein = 0, active = 0): DayTotals => ({ eaten: { kcal, protein, carbs: 0, fat: 0 }, activeCalories: active });

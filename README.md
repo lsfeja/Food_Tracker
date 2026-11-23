@@ -27,6 +27,8 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 - **Etikett-Foto**: Texterkennung im Browser (Tesseract.js, Deutsch/Englisch) liest die
   Werte pro 100 g; du bestätigst sie im Editor.
 - Grundumsatz (Ruhe + Alltagsbewegung), Makroziele, Anteil der aktiven Kalorien (50–100 %).
+- **Ziel-Slider**: Defizit (Fett reduzieren) oder Überschuss (Masse aufbauen) in kcal/Tag; das
+  Defizit ist durch die Untergrenze des Wochenbudgets begrenzt, der Überschuss auf +750.
 - Verlauf: Tage und Wochen mit Diagrammen; jeder Tag lässt sich öffnen und nachtragen.
 
 **Plan**

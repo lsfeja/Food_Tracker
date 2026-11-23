@@ -25,7 +25,7 @@ nutrition.put("/settings", async (c) => {
   const within = (v: unknown, fallback: number, min: number, max: number) => Math.min(Math.max(num(v, fallback), min), max);
   await c.env.DB.prepare(
     `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, active_enabled = ?, active_percent = ?,
-       rest_day_active_pct = ?, max_daily_deficit = ?, carry_over_pct = ?, timezone = ?, updated_at = ? WHERE user_id = ?`,
+       rest_day_active_pct = ?, max_daily_deficit = ?, carry_over_pct = ?, goal_kcal = ?, timezone = ?, updated_at = ? WHERE user_id = ?`,
   )
     .bind(
       positive(t.kcal, current.targets.kcal),
@@ -37,6 +37,8 @@ nutrition.put("/settings", async (c) => {
       within(b.restDayActivePct, 75, 0, 100),
       within(b.maxDailyDeficit, 700, 0, 2000),
       within(b.carryOverPct, 70, 0, 100),
+      // The weekly budget limits the deficit further (floor); the surplus is capped at +750.
+      within(b.goalKcal, 0, -2000, 750),
       timezone,
       Date.now(),
       userId,

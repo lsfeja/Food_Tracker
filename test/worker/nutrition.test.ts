@@ -21,6 +21,13 @@ describe("settings", () => {
     expect(updated.data.budget.activeCaloriesPercent).toBe(50); // clamped to 50–100
     expect(updated.data.budget.maxDailyDeficit).toBe(500);
     expect(updated.data.budget.carryOverPct).toBe(100); // clamped to 0–100
+    expect(updated.data.budget.goalKcal).toBe(0);
+
+    const goal = await call<UserSettings>("PUT", "/settings", { budget: { goalKcal: -250 } });
+    expect(goal.data.budget.goalKcal).toBe(-250);
+    expect(goal.data.budget.maxDailyDeficit).toBe(500);
+    const surplus = await call<UserSettings>("PUT", "/settings", { budget: { goalKcal: 5000 } });
+    expect(surplus.data.budget.goalKcal).toBe(750);
   });
 });
 
