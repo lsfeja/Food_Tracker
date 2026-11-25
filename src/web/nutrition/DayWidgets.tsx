@@ -67,12 +67,11 @@ export function MacroBar({ title, value, target, secondary }: { title: string; v
 /** Weekly budget: what's left this week, the plan and how far activity filled it up. */
 export function WeekBudgetView({ week }: { week: WeekSummary }) {
   const over = week.remaining < 0;
-  // Why the week's total differs from the plan.
+  // Why the week's budget differs from the plan (food only shifts targets between days).
   const changes = [
     { label: "From last week", value: week.changes.carry },
     { label: "Weekend bonus", value: week.changes.bonus },
     { label: "Activity", value: week.changes.activity },
-    { label: "Food", value: week.changes.food },
     { label: "Minimums", value: week.changes.limits },
   ].filter((c) => Math.abs(c.value) >= 1);
   return (

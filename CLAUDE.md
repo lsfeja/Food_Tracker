@@ -126,8 +126,9 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|
   week. Limits: day ≥ max(base + 25 % A, base + A − max daily deficit), rest day ≥ base +
   rest-day % of A; cuts that don't fit carry over by `carry_over_pct`. Days without entries
   count as not logged. Computed on the client from `totals` reaching back `inputStart(day)`.
-  `WeekSummary.changes` books every step (carry, bonus, activity, food, limits): total = plan +
-  their sum; the week card shows it.
+  `WeekSummary.changes` books every step (carry, bonus, activity, food, limits). The week
+  budget `total` = plan + carry + bonus + activity + limits; food moves only shift targets
+  between days and are not part of it (History compares eaten with `total`).
 - Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces), optional
   body fat; trailing 7-day average and kg/week (least-squares over 28 days). It doesn't change
   the budget.

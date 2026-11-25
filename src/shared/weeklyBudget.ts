@@ -97,7 +97,11 @@ export interface WeekSummary {
   carryIn: number;
   /** Extra activity from the previous weekend. */
   spillIn: number;
-  /** Sum of all day targets (after all adjustments so far). */
+  /**
+   * Week budget: plan + carry + bonus + activity + limits. Food eaten below/above a
+   * finished day's target only shifts targets between the days, so it isn't counted
+   * (a day eaten under and made up later stays within the budget, and vice versa).
+   */
   total: number;
   eaten: number;
   /** Base + counted active of the days so far ("filled up"). */
@@ -123,7 +127,8 @@ export interface WeekChanges {
   bonus: number;
   /** This week's activity above/below A (incl. rest days without activity). */
   activity: number;
-  /** Food below/above the target of finished days, moved to the following days. */
+  /** Food below/above the target of finished days, moved to the following days. Only
+   *  shifts targets between days, so it's NOT part of `total`. */
   food: number;
   /** Rest-day minimums above the standard target that the other days couldn't cover. */
   limits: number;
@@ -326,7 +331,8 @@ function simulateWeek(
       remaining: target[d] - dayEaten,
     };
   });
-  const total = tracked.reduce((sum, d) => sum + target[d], 0);
+  // Food moves are redistributions within the week, not more or less budget.
+  const total = tracked.reduce((sum, d) => sum + target[d], 0) - changes.food;
   const remaining =
     today < start ? total : todayIndex.reduce((sum, d) => sum + target[d], 0) - (todayIndex[0] === today ? (inputs[today]?.eaten ?? 0) : 0);
 

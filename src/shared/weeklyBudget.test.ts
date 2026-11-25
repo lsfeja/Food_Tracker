@@ -175,9 +175,10 @@ describe("weekly budget: weekend bonus across the week boundary", () => {
     // Sunday itself got its share (its minimum rose with it).
     expect(result.days[SUNDAY].minimum).toBeCloseTo(last.params.floor + share);
 
-    // 3. Where the difference to the plan comes from: total = plan + each change.
-    const { carry, bonus, activity, food, limits } = week.changes;
-    expect(week.total).toBeCloseTo(week.plan + carry + bonus + activity + food + limits);
+    // 3. Where the difference to the plan comes from: total = plan + each change (food
+    // moves between days aren't part of the week budget).
+    const { carry, bonus, activity, limits } = week.changes;
+    expect(week.total).toBeCloseTo(week.plan + carry + bonus + activity + limits);
     // Last week's cuts that didn't fit (70 %) …
     expect(carry).toBeCloseTo(week.carryIn);
     expect(carry).toBeLessThan(0);
@@ -197,6 +198,8 @@ describe("weekly budget: weekend bonus across the week boundary", () => {
     expect(result.weeks[MON].unplaced).toBeCloseTo(-(2000 - 3 * 375));
     expect(result.weeks[MON].changes.food).toBeCloseTo(-3 * 375);
     expect(result.weeks[MON].changes.activity).toBeCloseTo(600);
+    // The overeating only moved targets; the week budget is plan + the extra activity.
+    expect(result.weeks[MON].total).toBeCloseTo(20300 + 600);
   });
 });
 
@@ -206,6 +209,44 @@ describe("weekly budget: food", () => {
     expect(less.days[TUE].target).toBeCloseTo(2900 + 700 / 6);
     const more = run(week({ [MON]: { eaten: 3500 } }), TUE);
     expect(more.days[TUE].target).toBeCloseTo(2800);
+  });
+
+  it("food eaten under the target shifts to the following days, the week budget stays", () => {
+    // Mon 85 under, Tue 170 under (its target already had +85/6): Wed and Thu get +14 + 34.
+    const tuesdayTarget = 2900 + 85 / 6;
+    const inputs = week({ [MON]: { eaten: 2900 - 85 }, [TUE]: { eaten: tuesdayTarget - 170 } });
+    const result = run(inputs, WED);
+    expect(result.days[TUE].target).toBeCloseTo(tuesdayTarget);
+    for (const d of [WED, THU, FRI, SAT, SUN]) expect(result.days[d].target).toBeCloseTo(2900 + 85 / 6 + 170 / 5);
+    const w = result.weeks[MON];
+    expect(w.changes.food).toBeCloseTo(85 + 170);
+    expect(w.total).toBeCloseTo(20300);
+    expect(w.remaining).toBeCloseTo(w.total - w.eaten);
+  });
+
+  it("eating over and making up for it later stays within the week budget", () => {
+    // Mon 100 over, Tue–Sun eat their (lowered) targets exactly → the week is exactly on plan.
+    const lowered = 2900 - 100 / 6;
+    const inputs = week({ [MON]: { eaten: 3000 }, ...Object.fromEntries([TUE, WED, THU, FRI, SAT, SUN].map((d) => [d, { eaten: lowered }])) });
+    const result = simulateBudget(inputs, config(), NEXT_MON, MON, NEXT_MON);
+    const w = result.weeks[MON];
+    expect(result.days[SUN].target).toBeCloseTo(lowered);
+    expect(w.eaten).toBeCloseTo(20300);
+    expect(w.total).toBeCloseTo(20300);
+    expect(w.remaining).toBeCloseTo(0);
+    expect(w.carryOut).toBeCloseTo(0);
+  });
+
+  it("food that can't be made up within the week shows as over budget", () => {
+    // Mon–Sat on target, Sunday 1,000 over: nothing follows, so the week is 1,000 over
+    // (700 of it move on to the next week).
+    const inputs = week({ ...Object.fromEntries([MON, TUE, WED, THU, FRI, SAT].map((d) => [d, { eaten: 2900 }])), [SUN]: { eaten: 3900 } });
+    const result = simulateBudget(inputs, config(), NEXT_MON, MON, NEXT_MON);
+    const w = result.weeks[MON];
+    expect(w.total).toBeCloseTo(20300);
+    expect(w.eaten - w.total).toBeCloseTo(1000);
+    expect(w.remaining).toBeCloseTo(-1000);
+    expect(w.carryOut).toBeCloseTo(-700);
   });
 
   it("days without entries are not logged and don't move anything", () => {
