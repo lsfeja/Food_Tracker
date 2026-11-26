@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { DayDTO } from "../../shared/api";
 import { addDays, dayInTimeZone, weekStart } from "../../shared/days";
-import { inputStart } from "../../shared/weeklyBudget";
+import { inputStart } from "../../shared/energyBudget";
 import { barcodeVariants } from "../../shared/food";
 import { forAmount } from "../../shared/nutrients";
 import { activityFromRow, entryFromRow, foodFromRow, loadSettings, newId, parseFactors, totalsBetween } from "../db";
@@ -28,8 +28,8 @@ nutrition.put("/settings", async (c) => {
   const within = (v: unknown, fallback: number, min: number, max: number) => Math.min(Math.max(num(v, fallback), min), max);
   await db
     .prepare(
-      `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, active_enabled = ?, active_percent = ?,
-         rest_day_active_pct = ?, max_daily_deficit = ?, carry_over_pct = ?, goal_kcal = ?, alpha = ?, carry_enabled = ?, carry_cap_kcal = ?,
+      `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, active_enabled = ?, goal_kcal = ?, alpha = ?,
+         carry_enabled = ?, carry_cap_kcal = ?,
          sport_factors = ?, calib_interval_days = ?, calib_max_step_kcal = ?, calib_damping = ?, kcal_per_kg = ?, timezone = ?, updated_at = ?
        WHERE user_id = ?`,
     )
@@ -39,10 +39,6 @@ nutrition.put("/settings", async (c) => {
       positive(t.carbs, current.targets.carbs),
       positive(t.fat, current.targets.fat),
       b.activeCaloriesEnabled ? 1 : 0,
-      within(b.activeCaloriesPercent, 100, 50, 100),
-      within(b.restDayActivePct, 75, 0, 100),
-      within(b.maxDailyDeficit, 700, 0, 2000),
-      within(b.carryOverPct, 70, 0, 100),
       // Negative = deficit; a surplus is capped at +750.
       within(b.goalKcal, 0, -2000, 750),
       within(b.alpha, 0.2, 0.05, 0.9),
@@ -96,7 +92,7 @@ nutrition.get("/day/:day", async (c) => {
     day,
     entries: ((entries.results ?? []) as Record<string, unknown>[]).map(entryFromRow),
     activities: ((activities.results ?? []) as Record<string, unknown>[]).map(activityFromRow),
-    // Weekly budget: the carry-over chain and the 4-week average reach back ~12 weeks.
+    // Calorie target: the smoothing chain reaches back 12 weeks.
     totals: await totalsBetween(db, userId, inputStart(day), addDays(weekStart(day), 7)),
   };
   return c.json(result);

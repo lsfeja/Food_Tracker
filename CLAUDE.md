@@ -76,7 +76,8 @@ src/worker/
   routes/weight.ts     body weight per day (+ optional body fat): list, put, delete
   strava/client.ts     config, token exchange/refresh, authorized GET, models, kJ fallback
   strava/rateLimiter.ts D1 counter per provider (shared by all users), headers, 429
-  strava/sync.ts       14-day window + catch-up (max 60 days), detail per new activity
+  strava/sync.ts       28-day window + catch-up (max 60 days), detail per new activity,
+                       stores device_watts as has_power
   strava/backfill.ts   resumable history import (200/page, pauses on rate limit)
 ```
 
@@ -115,25 +116,25 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|
   of `start_date_local`. The client syncs its time zone into `settings.timezone`.
 - `food_entries` store **absolute** nutrients (snapshot); editing a food never rewrites
   history. Foods are hidden, not deleted. `source` manual/barcode/label/ai, `is_estimated`.
-- Budget (V3, `shared/weeklyBudget.ts`, pure, heavily tested): week plan = (base + A) × 7 +
-  slider, A = 4-week average of counted active kcal (Strava × 50–100 %), each day of the
-  previous week weighted double (`PREVIOUS_WEEK_WEIGHT`). Activity above A
-  is added to that day and the rest of the week (at least 3 days, crossing into next week),
-  raising each receiving day's target and minimum alike (rest day = rest-day minimum + bonus;
-  later cuts can't eat it);
-  activity below A cuts the following days (rest days from the plan: from the day itself).
-  Food above/below a finished day's target moves to the following days and into the next
-  week. Limits: day ≥ max(base + 25 % A, base + A − max daily deficit), rest day ≥ base +
-  rest-day % of A; cuts that don't fit carry over by `carry_over_pct`. Days without entries
-  count as not logged. Computed on the client from `totals` reaching back `inputStart(day)`.
-  `WeekSummary.changes` books every step (carry, bonus, activity, food, limits). The week
-  budget `total` = plan + carry + bonus + activity + limits; food moves only shift targets
-  between days and are not part of it (History compares eaten with `total`).
+- Calorie target (`shared/energyBudget.ts`, pure, heavily tested; spec "Kalorienziel"):
+  target(d) = baseline + A_smooth(d) − deficit + carry(d). Activities are cleaned per activity:
+  `max(0, kcal − baseline/1440 × moving min) × sport factor` (`sportFactorKey`: virtual ride /
+  ride with power 1.0, ride 0.8, run/trail run 0.9, weight training 0.6, other 0.8; user
+  overrides). A_smooth = EWMA of yesterday's A (alpha 0.2): today's workout counts from
+  tomorrow; the chain starts `CHAIN_DAYS` before the first week with the 28-day mean; days after
+  today assume the smoothed level. Weekly balance (Mon–Sun, switch + cap ±300): carry(d) =
+  (Σ target_base − Σ eaten of the finished, logged days before d) / days left; Monday starts at
+  0, nothing crosses Sunday; days without entries and vacation days don't count. Budget values
+  apply per day via `budget_history` (`budgetParamsFor`): a change is valid from the user's
+  today (`PUT /settings` with `day`), past days keep theirs, activities always recompute.
+  Computed on the client from `totals` (with each day's activities) reaching back
+  `inputStart(day)`. History compares eaten with Σ target_base of the logged days.
 - Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces), optional
   body fat; trailing 7-day average and kg/week (least-squares over 28 days). It doesn't change
   the budget.
-- Vacation days (`untracked_days`, flag `untracked` in `totals`) are skipped by the budget,
-  the active average and nutrition stats; activities on them still count for sport stats.
+- Vacation days (`untracked_days`, flag `untracked` in `totals`) have no target and are skipped
+  by the weekly balance, calibration and nutrition stats; their activities still count (EWMA,
+  sport stats).
 - Sports (`SPORTS`/`sportInfo` in `shared/workout.ts`): `race` is plannable with general
   details for now; race-specific details (discipline, distance, target time, budget effect)
   are planned as their own `WorkoutDetails` kind.

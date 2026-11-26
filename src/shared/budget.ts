@@ -1,8 +1,8 @@
-import type { Day } from "./days";
+import { type Day, weekDays } from "./days";
 import type { ActivityInput } from "./energyBudget";
 import { addNutrients, type Nutrients, zeroNutrients } from "./nutrients";
-import { budgetConfig, type NutritionTargets, type UserSettings } from "./settings";
-import { type BudgetDayInput, type BudgetResult, type DayPlan, simulateBudget, type WeekSummary } from "./weeklyBudget";
+import { type BudgetDayInput, type BudgetResult, type DayPlan, simulateBudget, type WeekSummary } from "./energyBudget";
+import { budgetParamsFor, type NutritionTargets, type UserSettings } from "./settings";
 
 /** Raw totals of one day. */
 export interface DayTotals {
@@ -31,12 +31,18 @@ export interface DayBudget {
   day: Day;
   calories: CalorieBudget;
   eaten: Nutrients;
-  /** Counted active kcal of the day. */
+  /** Cleaned active kcal of the day (they count from tomorrow). */
   active: number;
   targets: NutritionTargets;
   plan: DayPlan | null;
   week: WeekSummary | null;
+  /** Monday … Sunday of the day's week. */
+  weekPlans: DayPlan[];
+  /** A rest day is planned (Plan tab). */
+  restDay: boolean;
 }
+
+export type BudgetSettingsInput = Pick<UserSettings, "targets" | "budget" | "budgetHistory">;
 
 export const emptyTotals = (): DayTotals => ({ eaten: zeroNutrients(), activeCalories: 0 });
 
@@ -48,20 +54,14 @@ export function calorieBudget(total: number, eaten: number): CalorieBudget {
 export function budgetInputs(totals: Record<Day, DayTotals>): Record<Day, BudgetDayInput> {
   const inputs: Record<Day, BudgetDayInput> = {};
   for (const [day, t] of Object.entries(totals)) {
-    inputs[day] = { eaten: t.eaten.kcal, active: t.activeCalories, restDay: t.restDay, untracked: t.untracked };
+    inputs[day] = { eaten: t.eaten.kcal, untracked: t.untracked, activities: t.activities };
   }
   return inputs;
 }
 
-/** Weekly budget for the days from `from` to `to` (see weeklyBudget.ts). */
-export function budgetRange(
-  settings: Pick<UserSettings, "targets" | "budget">,
-  totals: Record<Day, DayTotals>,
-  today: Day,
-  from: Day,
-  to: Day,
-): BudgetResult {
-  return simulateBudget(budgetInputs(totals), budgetConfig(settings), today, from, to);
+/** Targets for the weeks from `from` to `to` (see energyBudget.ts). */
+export function budgetRange(settings: BudgetSettingsInput, totals: Record<Day, DayTotals>, today: Day, from: Day, to: Day): BudgetResult {
+  return simulateBudget(budgetInputs(totals), budgetParamsFor(settings), today, from, to);
 }
 
 export function dayBudget(day: Day, totals: Record<Day, DayTotals>, result: BudgetResult, targets: NutritionTargets): DayBudget {
@@ -76,11 +76,13 @@ export function dayBudget(day: Day, totals: Record<Day, DayTotals>, result: Budg
     targets,
     plan,
     week,
+    weekPlans: plan ? weekDays(plan.week).flatMap((d) => (result.days[d] ? [result.days[d]] : [])) : [],
+    restDay: Boolean(dayTotals.restDay),
   };
 }
 
 /** Budget of one day; `totals` must reach back to `inputStart(day)`. */
-export function budgetFor(day: Day, settings: Pick<UserSettings, "targets" | "budget">, totals: Record<Day, DayTotals>, today: Day): DayBudget {
+export function budgetFor(day: Day, settings: BudgetSettingsInput, totals: Record<Day, DayTotals>, today: Day): DayBudget {
   return dayBudget(day, totals, budgetRange(settings, totals, today, day, day), settings.targets);
 }
 

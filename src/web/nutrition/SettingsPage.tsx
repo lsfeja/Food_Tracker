@@ -2,7 +2,7 @@ import * as Format from "../../shared/format";
 import { kcalFromMacros } from "../../shared/nutrients";
 import { budgetFor } from "../../shared/budget";
 import { addDays, weekStart } from "../../shared/days";
-import { inputStart, type WeekSummary } from "../../shared/weeklyBudget";
+import { type DayPlan, inputStart, SPORT_FACTOR_KEYS, type SportFactorKey, sportFactors } from "../../shared/energyBudget";
 import { Palmtree, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useMe, useSetUntracked, useSettings, useTotals, useUntrackedDays, useUpdateSettings } from "../api/nutrition";
@@ -14,13 +14,13 @@ import { LabeledRow, NumberSetting, Section, Segmented, ToggleRow } from "../com
 import { setThemePreference, useThemePreference } from "../lib/theme";
 import { ActivitySettingsSection } from "./ActivitySettingsSection";
 
-/** Targets, weekly budget mode, activity integration. */
+/** Targets, calorie target settings, activity integration. */
 export function SettingsPage() {
   const settings = useSettings();
   const update = useUpdateSettings();
   const me = useMe();
   const { targets, budget } = settings;
-  const week = useCurrentWeekBudget();
+  const plan = useTodayPlan();
 
   return (
     <div className="page">
@@ -28,7 +28,7 @@ export function SettingsPage() {
       <div className="page-content">
         <Section
           header="Daily Targets"
-          footer={`Base = what you need per day at rest plus everyday movement, without workouts. Workouts come from Strava. Your macro targets add up to ${Format.kcal(kcalFromMacros(targets))} kcal.`}
+          footer={`Base = what you need per day incl. everyday movement, without workouts. Workouts come from Strava. Your macro targets add up to ${Format.kcal(kcalFromMacros(targets))} kcal.`}
         >
           <NumberSetting title="Base" unit="kcal" value={targets.kcal} onChange={(kcal) => update({ targets: { kcal } })} />
           <NumberSetting title="Protein" unit="g" value={targets.protein} onChange={(protein) => update({ targets: { protein } })} />
@@ -36,9 +36,11 @@ export function SettingsPage() {
           <NumberSetting title="Fat" unit="g" value={targets.fat} onChange={(fat) => update({ targets: { fat } })} />
         </Section>
 
-        <GoalSection week={week} />
+        <GoalSection plan={plan} />
 
-        <WeeklyBudgetSection week={week} />
+        <CalorieTargetSection plan={plan} />
+
+        <SportFactorsSection />
 
         <VacationSection />
 
@@ -46,34 +48,13 @@ export function SettingsPage() {
 
         <Section
           header="Active Calories"
-          footer="Activity trackers often overestimate calories burned. Counting only part of them keeps your budget on the safe side."
+          footer="Workout calories are cleaned (your resting burn during the workout is already in the base, the sport factor corrects Strava's estimate) and smoothed: today's workout counts from tomorrow."
         >
           <ToggleRow
-            label="Add active calories to budget"
+            label="Add workouts to the target"
             checked={budget.activeCaloriesEnabled}
             onChange={(activeCaloriesEnabled) => update({ budget: { activeCaloriesEnabled } })}
           />
-          {budget.activeCaloriesEnabled && (
-            <div className="list-row stack" style={{ alignItems: "stretch", gap: 8 }}>
-              <div className="row">
-                <span className="grow">Count</span>
-                <span className="secondary tabular">{Math.round(budget.activeCaloriesPercent)} %</span>
-              </div>
-              <div className="row" style={{ gap: 10 }}>
-                <span className="caption" style={{ whiteSpace: "nowrap" }}>50 %</span>
-                <input
-                  type="range"
-                  min={50}
-                  max={100}
-                  step={5}
-                  value={budget.activeCaloriesPercent}
-                  aria-label="Share of active calories"
-                  onChange={(event) => update({ budget: { activeCaloriesPercent: Number(event.target.value) } })}
-                />
-                <span className="caption" style={{ whiteSpace: "nowrap" }}>100 %</span>
-              </div>
-            </div>
-          )}
         </Section>
 
         <AppearanceSection />
@@ -87,62 +68,52 @@ export function SettingsPage() {
   );
 }
 
-/** This week's budget (plan, limits) for the settings preview. */
-function useCurrentWeekBudget(): WeekSummary | null {
+/** Today's target and its parts, for the previews. */
+function useTodayPlan(): DayPlan | null {
   const settings = useSettings();
   const today = useToday();
   const totals = useTotals(inputStart(today), addDays(weekStart(today), 7));
-  return totals.data ? budgetFor(today, settings, totals.data, today).week : null;
+  return totals.data ? budgetFor(today, settings, totals.data, today).plan : null;
 }
 
 const goalLabel = (goal: number) => (goal < 0 ? "Lose fat" : goal > 0 ? "Build mass" : "Maintain");
 const signed = (value: number) => (value > 0 ? `+${Format.kcal(value)}` : value < 0 ? `−${Format.kcal(-value)}` : "±0");
+const GOAL_MIN = -1000;
+const GOAL_MAX = 750;
 
-/** Deficit/surplus slider, limited by the lowest allowed day. */
-function GoalSection({ week }: { week: WeekSummary | null }) {
+/** Deficit/surplus slider: the same amount every day. */
+function GoalSection({ plan }: { plan: DayPlan | null }) {
   const settings = useSettings();
   const update = useUpdateSettings();
-  const goal = settings.budget.goalKcal;
-  const p = week?.params;
-  const min = p ? Math.ceil(p.goalRange.min / 25) * 25 : -700;
-  const max = p ? p.goalRange.max : 750;
-  const value = Math.min(Math.max(goal, min), max);
-  // What the budget actually uses (the floor may allow a few kcal more than the slider step).
-  const effective = p ? Math.round(p.goal) : value;
+  const goal = Math.min(Math.max(settings.budget.goalKcal, GOAL_MIN), GOAL_MAX);
   return (
-    <Section
-      header="Goal"
-      footer={
-        p && goal < min
-          ? `Limited to ${signed(effective)} kcal/day: no day may drop below ${Format.kcal(p.floor)} kcal (base + 25 % of your active average, at most ${Format.kcal(settings.budget.maxDailyDeficit)} below base + average).`
-          : "Deficit to lose fat, surplus to build mass. The deficit is limited so that no day drops below the lowest day of your weekly budget."
-      }
-    >
+    <Section header="Goal" footer="Deficit to lose fat, surplus to build mass. It applies to every day from today on; past days keep theirs.">
       <div className="list-row stack" style={{ alignItems: "stretch", gap: 8 }}>
         <div className="row">
-          <span className="grow">{goalLabel(effective)}</span>
-          <span className="semibold tabular">{signed(effective)} kcal/day</span>
+          <span className="grow">{goalLabel(goal)}</span>
+          <span className="semibold tabular">{signed(goal)} kcal/day</span>
         </div>
         <div className="row" style={{ gap: 10 }}>
           <span className="caption tabular" style={{ whiteSpace: "nowrap" }}>
-            {signed(min)}
+            {signed(GOAL_MIN)}
           </span>
           <input
             type="range"
-            min={min}
-            max={max}
+            min={GOAL_MIN}
+            max={GOAL_MAX}
             step={25}
-            value={value}
+            value={goal}
             aria-label="Daily deficit or surplus"
             onChange={(event) => update({ budget: { goalKcal: Number(event.target.value) } })}
           />
           <span className="caption tabular" style={{ whiteSpace: "nowrap" }}>
-            {signed(max)}
+            {signed(GOAL_MAX)}
           </span>
         </div>
-        {p && (
+        {plan && (
           <span className="footnote secondary tabular">
-            Daily target {Format.kcal(p.standard)} kcal = base {Format.kcal(settings.targets.kcal)} + Ø active {Format.kcal(p.average)} {signed(p.goal)}
+            Today {Format.kcal(plan.targetBase)} kcal = base {Format.kcal(plan.baseline)} + training {Format.kcal(plan.smoothedActive)} {signed(-plan.deficit)}
+            {Math.round(plan.carry) !== 0 && `, plus balance ${signed(plan.carry)}`}
           </span>
         )}
       </div>
@@ -150,34 +121,57 @@ function GoalSection({ week }: { week: WeekSummary | null }) {
   );
 }
 
-/** Weekly budget: current plan (from the 4-week average) and its limits. */
-function WeeklyBudgetSection({ week }: { week: WeekSummary | null }) {
+/** Smoothing of workouts and the weekly balance. */
+function CalorieTargetSection({ plan }: { plan: DayPlan | null }) {
   const settings = useSettings();
   const update = useUpdateSettings();
-  const p = week?.params;
   const { budget } = settings;
   return (
     <Section
-      header="Weekly Budget"
-      footer="Your week is planned with base + your average active calories of the last 4 weeks (the previous week counts double). Rest days (from the Plan tab) get at least base + the rest-day minimum in % of that average. Workouts above the average add to the rest of the week (at least 3 days), days with less activity and food above the target are taken from the following days. Food you don't eat carries over, even into the next week. Cuts that don't fit into the week move to the next week by the share below."
+      header="Calorie Target"
+      footer="Target = base + training (smoothed) − deficit + balance. Workouts count from the next day, smoothed over a few days (smoothing = weight of yesterday; 0.2 ≈ 3 days half-life). Weekly balance: food below or above your plan on the days before is spread over the rest of the week (Mon–Sun), up to the limit per day. Days without entries and vacation days don't count; nothing carries over into the next week."
     >
-      <LabeledRow label="Ø active (4 weeks)" value={p ? `${Format.kcal(p.average)} kcal/day` : "–"} />
-      <LabeledRow label="Daily target" value={p ? `${Format.kcal(p.standard)} kcal` : "–"} />
-      <LabeledRow label="Weekly plan" value={week ? `${Format.kcal(week.plan)} kcal` : "–"} />
-      <LabeledRow label="Lowest day · rest day" value={p ? `${Format.kcal(p.floor)} · ${Format.kcal(p.restMinimum)} kcal` : "–"} />
-      <NumberSetting
-        title="Rest-day minimum"
-        unit="%"
-        value={budget.restDayActivePct}
-        onChange={(restDayActivePct) => update({ budget: { restDayActivePct: Math.min(restDayActivePct, 100) } })}
-      />
-      <NumberSetting title="Max deficit per day" unit="kcal" value={budget.maxDailyDeficit} onChange={(maxDailyDeficit) => update({ budget: { maxDailyDeficit } })} />
-      <NumberSetting
-        title="Cuts carried to next week"
-        unit="%"
-        value={budget.carryOverPct}
-        onChange={(carryOverPct) => update({ budget: { carryOverPct: Math.min(carryOverPct, 100) } })}
-      />
+      <LabeledRow label="Training today (smoothed)" value={plan ? `${Format.kcal(plan.smoothedActive)} kcal` : "–"} />
+      <LabeledRow label="Target today" value={plan ? `${Format.kcal(plan.target)} kcal` : "–"} />
+      <NumberSetting title="Smoothing" value={budget.alpha} maxFraction={2} onChange={(alpha) => update({ budget: { alpha: Math.min(Math.max(alpha, 0.05), 0.9) } })} />
+      <ToggleRow label="Weekly balance" checked={budget.carryEnabled} onChange={(carryEnabled) => update({ budget: { carryEnabled } })} />
+      {budget.carryEnabled && (
+        <NumberSetting title="Balance limit per day" unit="kcal" value={budget.carryCapKcal} onChange={(carryCapKcal) => update({ budget: { carryCapKcal: Math.min(carryCapKcal, 1500) } })} />
+      )}
+    </Section>
+  );
+}
+
+const factorLabels: Record<SportFactorKey, string> = {
+  virtualRide: "Virtual ride",
+  ridePower: "Ride with power meter",
+  ride: "Ride without power meter",
+  run: "Run",
+  trailRun: "Trail run",
+  weightTraining: "Weight training",
+  other: "Other sports",
+};
+
+/** Share of a workout's calories that counts, per sport. */
+function SportFactorsSection() {
+  const settings = useSettings();
+  const update = useUpdateSettings();
+  const overrides = settings.budget.sportFactors;
+  const factors = sportFactors(overrides);
+  return (
+    <Section
+      header="Sport Factors"
+      footer="Share of a workout's calories that counts, after subtracting your resting burn during it. Power-based rides are exact; Strava's estimates are rougher without power data and for strength training."
+    >
+      {SPORT_FACTOR_KEYS.map((key) => (
+        <NumberSetting
+          key={key}
+          title={factorLabels[key]}
+          value={factors[key]}
+          maxFraction={2}
+          onChange={(value) => update({ budget: { sportFactors: { ...overrides, [key]: Math.min(value, 2) } } })}
+        />
+      ))}
     </Section>
   );
 }
@@ -203,7 +197,7 @@ function VacationSection() {
   return (
     <Section
       header="Vacation Days"
-      footer="Days marked here (or with the switch on a day) aren't tracked: no budget, no balance and they don't count in the 4-week average. Strava activities still count in the stats. Swipe to remove."
+      footer="Days marked here (or with the switch on a day) aren't tracked: no target, not in the weekly balance or the calibration. Their workouts still count (training load and stats). Swipe to remove."
     >
       {upcoming.map(row)}
       {recent.map(row)}

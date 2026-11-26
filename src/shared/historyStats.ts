@@ -1,7 +1,6 @@
-import { budgetRange, type DayTotals, emptyTotals } from "./budget";
-import { addDays, type Day, weekStart } from "./days";
+import { budgetRange, type BudgetSettingsInput, type DayTotals, emptyTotals } from "./budget";
+import { addDays, type Day, weekDays, weekStart } from "./days";
 import type { Nutrients } from "./nutrients";
-import type { UserSettings } from "./settings";
 
 export interface DayStat {
   day: Day;
@@ -9,6 +8,8 @@ export interface DayStat {
   activeCalories: number;
   /** Tagesziel of the day (0 on vacation days). */
   budget: number;
+  /** Part of the target from the weekly balance (+ uneaten earlier, − eaten more). */
+  carry: number;
   untracked: boolean;
   hasData: boolean;
 }
@@ -16,25 +17,27 @@ export interface DayStat {
 export interface WeekStat {
   start: Day;
   eatenKcal: number;
-  /** Sum of the day targets of the week. */
+  /** Σ target_base of the logged days (what the eaten kcal compare with). */
   budget: number;
-  /** Weekly plan (standard target × tracked days). */
-  plan: number;
+  /** Σ target_base of all tracked days of the week (estimates after today). */
+  weekTarget: number;
   loggedDays: number;
   averagePerLoggedDay: number;
 }
 
 /** `count` days ending with `today`, oldest first. `totals` must reach back to `inputStart`. */
-export function dayStats(today: Day, count: number, totals: Record<Day, DayTotals>, settings: UserSettings): DayStat[] {
+export function dayStats(today: Day, count: number, totals: Record<Day, DayTotals>, settings: BudgetSettingsInput): DayStat[] {
   const first = addDays(today, -count + 1);
   const budget = budgetRange(settings, totals, today, first, today);
   return Array.from({ length: count }, (_, index) => addDays(first, index)).map((day) => {
     const dayTotals = totals[day] ?? emptyTotals();
+    const plan = budget.days[day];
     return {
       day,
       eaten: dayTotals.eaten,
       activeCalories: dayTotals.activeCalories,
-      budget: budget.days[day]?.target ?? 0,
+      budget: plan?.target ?? 0,
+      carry: plan?.carry ?? 0,
       untracked: Boolean(dayTotals.untracked),
       hasData: dayTotals.eaten.kcal > 0 || dayTotals.activeCalories > 0,
     };
@@ -42,25 +45,26 @@ export function dayStats(today: Day, count: number, totals: Record<Day, DayTotal
 }
 
 /** `count` Monday-based weeks ending with the week of `today`, oldest first. */
-export function weekStats(today: Day, count: number, totals: Record<Day, DayTotals>, settings: UserSettings): WeekStat[] {
+export function weekStats(today: Day, count: number, totals: Record<Day, DayTotals>, settings: BudgetSettingsInput): WeekStat[] {
   const current = weekStart(today);
   const first = addDays(current, -7 * (count - 1));
   const budget = budgetRange(settings, totals, today, first, today);
   return Array.from({ length: count }, (_, index) => addDays(first, 7 * index)).map((start) => {
     let eaten = 0;
     let logged = 0;
-    for (let offset = 0; offset < 7; offset++) {
-      const dayTotals = totals[addDays(start, offset)];
-      if (!dayTotals || dayTotals.untracked) continue;
-      eaten += dayTotals.eaten.kcal;
-      if (dayTotals.eaten.kcal > 0) logged++;
+    let loggedTarget = 0;
+    for (const day of weekDays(start)) {
+      const plan = budget.days[day];
+      if (!plan || plan.untracked || !plan.logged || day > today) continue;
+      eaten += plan.eaten;
+      loggedTarget += plan.targetBase;
+      logged++;
     }
-    const week = budget.weeks[start];
     return {
       start,
       eatenKcal: eaten,
-      budget: week?.total ?? 0,
-      plan: week?.plan ?? 0,
+      budget: loggedTarget,
+      weekTarget: budget.weeks[start]?.targetBase ?? 0,
       loggedDays: logged,
       averagePerLoggedDay: logged > 0 ? eaten / logged : 0,
     };

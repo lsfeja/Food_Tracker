@@ -12,22 +12,17 @@ describe("settings", () => {
     expect(initial.data.targets.kcal).toBe(2200);
     expect(initial.data.timezone).toBe("Europe/Berlin");
 
-    expect(initial.data.budget).toMatchObject({ restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70 });
+    expect(initial.data.budget).toMatchObject({ activeCaloriesEnabled: true, goalKcal: 0 });
 
-    const updated = await call<UserSettings>("PUT", "/settings", {
-      targets: { kcal: 2500 },
-      budget: { activeCaloriesPercent: 30, maxDailyDeficit: 500, carryOverPct: 150 },
-    });
+    const updated = await call<UserSettings>("PUT", "/settings", { targets: { kcal: 2500 }, budget: { activeCaloriesEnabled: false } });
     expect(updated.data.targets.kcal).toBe(2500);
     expect(updated.data.targets.protein).toBe(140);
-    expect(updated.data.budget.activeCaloriesPercent).toBe(50); // clamped to 50–100
-    expect(updated.data.budget.maxDailyDeficit).toBe(500);
-    expect(updated.data.budget.carryOverPct).toBe(100); // clamped to 0–100
+    expect(updated.data.budget.activeCaloriesEnabled).toBe(false);
     expect(updated.data.budget.goalKcal).toBe(0);
 
     const goal = await call<UserSettings>("PUT", "/settings", { budget: { goalKcal: -250 } });
     expect(goal.data.budget.goalKcal).toBe(-250);
-    expect(goal.data.budget.maxDailyDeficit).toBe(500);
+    expect(goal.data.budget.activeCaloriesEnabled).toBe(false);
     const surplus = await call<UserSettings>("PUT", "/settings", { budget: { goalKcal: 5000 } });
     expect(surplus.data.budget.goalKcal).toBe(750);
   });

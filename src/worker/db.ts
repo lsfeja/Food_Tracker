@@ -24,10 +24,6 @@ export function settingsFromRow(row: Row | null): UserSettings {
     },
     budget: {
       activeCaloriesEnabled: n(row?.active_enabled ?? 1) === 1,
-      activeCaloriesPercent: n(row?.active_percent ?? 100),
-      restDayActivePct: n(row?.rest_day_active_pct ?? 75),
-      maxDailyDeficit: n(row?.max_daily_deficit ?? 700),
-      carryOverPct: n(row?.carry_over_pct ?? 70),
       goalKcal: n(row?.goal_kcal ?? 0),
       alpha: n(row?.alpha ?? 0.2),
       carryEnabled: n(row?.carry_enabled ?? 1) === 1,

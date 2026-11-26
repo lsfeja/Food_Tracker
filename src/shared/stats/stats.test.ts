@@ -244,7 +244,7 @@ describe("plan stats", () => {
 describe("nutrition stats", () => {
   const settings: UserSettings = {
     targets: { kcal: 2000, protein: 150, carbs: 200, fat: 70 },
-    budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: 0, alpha: 0.2, carryEnabled: true, carryCapKcal: 300, sportFactors: {}, calibration: DEFAULT_CALIBRATION },
+    budget: { activeCaloriesEnabled: true, goalKcal: 0, alpha: 0.2, carryEnabled: true, carryCapKcal: 300, sportFactors: {}, calibration: DEFAULT_CALIBRATION },
     timezone: "UTC",
     budgetHistory: [],
   };
@@ -266,7 +266,7 @@ describe("nutrition stats", () => {
     expect(r.loggedDays).toBe(2);
     expect(r.average.kcal).toBe(2100);
     expect(r.average.protein).toBe(140);
-    // Weekly budget: the 500 active kcal of Tuesday are spread over Tue–Sun, so 2,400 is over.
+    // Tuesday's target is 2,000 + Monday's 200 left over / 6: 2,400 is over.
     expect(r.daysWithin).toBe(1);
     expect(r.daysOver).toBe(1);
     expect(r.buckets).toHaveLength(7);

@@ -13,14 +13,16 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
 ## Funktionen
 
 **Ernährung**
-- **Wochenbudget** (V3): Wochenplan = (Grundumsatz + Ø Aktivkalorien der letzten 4 Wochen) × 7;
-  im Schnitt zählt die Vorwoche doppelt (Gewichtung 2 : 1 : 1 : 1 pro Tag).
-  Mehr Training als im Schnitt füllt den Rest der Woche auf (mindestens 3 Tage, auch über die
-  Wochengrenze; der Bonus kommt oben auf das Tagesminimum und wird nicht weggekürzt), weniger kürzt
-  die Folgetage; Ruhetage aus dem Plan sind geschützt, die Tage haben eine Untergrenze (max.
-  Defizit pro Tag einstellbar). Gegessenes über/unter dem Tagesziel wandert auf die Folgetage und
-  in die nächste Woche; nicht unterzubringende Kürzungen nur anteilig (Standard 70 %).
-- Tagesübersicht: Ring mit verbleibenden kcal des Tagesziels, Wochenkarte, Makro-Balken,
+- **Kalorienziel**: Tagesziel = Grundbedarf + Training (geglättet) − Defizit + Wochenausgleich.
+  Strava-Kalorien werden pro Aktivität bereinigt (Ruheverbrauch während der Einheit abziehen,
+  Sportfaktor: Rolle/Powermeter 1,0 · Rad ohne Powermeter 0,8 · Laufen 0,9 · Kraft 0,6 · sonst
+  0,8; einstellbar) und als gleitender Schnitt (EWMA, α 0,2) ab dem Folgetag gezählt – der Ruhetag
+  nach einer harten Einheit bekommt am meisten. **Wochenausgleich** (Mo–So, abschaltbar):
+  weniger/mehr Gegessenes der Vortage wird auf die Resttage verteilt, max. ±300 kcal pro Tag;
+  nichts wandert über Sonntag hinaus, Tage ohne Einträge und Urlaubstage zählen nicht.
+  Änderungen an Grundbedarf, Defizit usw. gelten ab dem Tag der Änderung (Einstellungs-Historie).
+- Tagesübersicht: Ring mit verbleibenden kcal, Aufschlüsselung des Ziels, Woche als Plan/Gegessen
+  pro Tag mit Ausgleich-Hinweis, Makro-Balken,
   Einträge (wischen zum Bearbeiten/Löschen), großer **+**-Button (gedrückt halten → Scan/Etikett).
 - Hinzufügen: zuletzt/häufig verwendete und eigene Lebensmittel, Suche in Open Food Facts,
   Menge in Gramm (Nährwerte pro 100 g werden skaliert), neue Lebensmittel, Schnelleintrag.
@@ -28,13 +30,14 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
   Produkte → Etikett fotografieren oder manuell erfassen.
 - **Etikett-Foto**: Texterkennung im Browser (Tesseract.js, Deutsch/Englisch) liest die
   Werte pro 100 g; du bestätigst sie im Editor.
-- Grundumsatz (Ruhe + Alltagsbewegung), Makroziele, Anteil der aktiven Kalorien (50–100 %).
+- Grundbedarf (Ruhe + Alltagsbewegung), Makroziele, Glättung, Wochenausgleich, Sportfaktoren.
 - **Urlaubstage**: einzelne Tage als „nicht getrackt“ markieren (auch im Voraus, in den
-  Einstellungen oder per Schalter am Tag): kein Budget, keine Bilanz, nicht im 4-Wochen-Schnitt;
-  Strava-Aktivitäten zählen trotzdem in der Sportstatistik.
-- **Ziel-Slider**: Defizit (Fett reduzieren) oder Überschuss (Masse aufbauen) in kcal/Tag; das
-  Defizit ist durch die Untergrenze des Wochenbudgets begrenzt, der Überschuss auf +750.
-- Verlauf: Tage und Wochen mit Diagrammen; jeder Tag lässt sich öffnen und nachtragen.
+  Einstellungen oder per Schalter am Tag): kein Ziel, nicht im Wochenausgleich und nicht in der
+  Kalibrierung; Strava-Aktivitäten zählen trotzdem (Trainingslast und Sportstatistik).
+- **Ziel-Slider**: Defizit (Fett reduzieren) oder Überschuss (Masse aufbauen), −1.000 bis +750
+  kcal/Tag, gilt ab heute.
+- Verlauf: Tage und Wochen mit Diagrammen; pro Tag sichtbar, wie viel vom Ziel aus dem
+  Ausgleich stammt; jeder Tag lässt sich öffnen und nachtragen.
 - **Gewicht**: ein Wert pro Tag (optional Körperfett) direkt auf „Today“ eintragen; die
   Gewichtsseite zeigt Tageswerte, 7-Tage-Schnitt, kg pro Woche (Trend der letzten 4 Wochen) und
   die Veränderung im gewählten Zeitraum. Das Budget bleibt davon unberührt.
@@ -234,7 +237,8 @@ Schnellzugriffe: `https://<domain>/add?mode=barcode` (Scanner) oder `…/add?mod
 | Tabelle | Inhalt |
 |---------|--------|
 | `users` | Nutzer pro Access-E-Mail |
-| `settings` | Ziele, Wochenbudget, Anteil aktiver kcal, Zeitzone |
+| `settings` | Ziele, Defizit, Glättung, Wochenausgleich, Sportfaktoren, Kalibrierung, Zeitzone |
+| `budget_history` | Budget-Einstellungen gültig ab einem Tag (vergangene Tage behalten ihre Werte) |
 | `foods` | eigene Lebensmittel (pro 100 g, Barcode, Nutzungsstatistik) |
 | `food_entries` | Einträge mit **absoluten** Nährwerten (Bearbeiten eines Lebensmittels ändert keine Historie); `source` manual/barcode/label/ai, `is_estimated` |
 | `connections` | OAuth-Verbindungen pro Anbieter (Tokens verschlüsselt) |

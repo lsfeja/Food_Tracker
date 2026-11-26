@@ -1,7 +1,7 @@
-import { budgetRange, type DayTotals } from "../budget";
+import { budgetRange, type BudgetSettingsInput, type DayTotals } from "../budget";
 import { addDays, type Day } from "../days";
 import { addNutrients, type Nutrients, scaleNutrients, zeroNutrients } from "../nutrients";
-import type { NutritionTargets, UserSettings } from "../settings";
+import type { NutritionTargets } from "../settings";
 import { bucketStart, bucketStarts, type Bucket, inInterval, type Period, type PeriodKind, periodInterval } from "./period";
 
 export interface NutritionBucket {
@@ -34,7 +34,7 @@ const emptyBucket = (start: Day): NutritionBucket => ({ start, loggedDays: 0, ea
  */
 export function nutritionReport(
   totalsByDay: Record<Day, DayTotals>,
-  settings: UserSettings,
+  settings: BudgetSettingsInput,
   period: Period,
   today: Day,
   earliest: Day | null = null,

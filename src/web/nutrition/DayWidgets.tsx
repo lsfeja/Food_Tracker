@@ -1,12 +1,12 @@
 import { Barcode, Bike, Dumbbell, Flame, Footprints, Mountain, ScanText, Sparkles, Waves } from "lucide-react";
 import type { ActivityDTO, EntryDTO } from "../../shared/api";
 import type { CalorieBudget } from "../../shared/budget";
-import type { WeekSummary } from "../../shared/weeklyBudget";
+import { addDays, type Day } from "../../shared/days";
+import type { DayPlan, WeekSummary } from "../../shared/energyBudget";
 import type { EntrySource } from "../../shared/food";
 import * as Format from "../../shared/format";
-import { ProgressBar } from "../components/ui";
-import { KcalText } from "../components/ui";
-import { formatTime } from "../lib/dates";
+import { KcalText, ProgressBar } from "../components/ui";
+import { formatTime, weekdayShort } from "../lib/dates";
 
 /** Large ring: eaten vs. budget with the remaining calories in the center. */
 export function CalorieRing({ budget, size = 210, lineWidth = 18 }: { budget: CalorieBudget; size?: number; lineWidth?: number }) {
@@ -65,47 +65,58 @@ export function MacroBar({ title, value, target, secondary }: { title: string; v
 }
 
 /** Weekly budget: what's left this week, the plan and how far activity filled it up. */
-export function WeekBudgetView({ week }: { week: WeekSummary }) {
-  const over = week.remaining < 0;
-  // Why the week's budget differs from the plan (food only shifts targets between days).
-  const changes = [
-    { label: "From last week", value: week.changes.carry },
-    { label: "Weekend bonus", value: week.changes.bonus },
-    { label: "Activity", value: week.changes.activity },
-    { label: "Minimums", value: week.changes.limits },
-  ].filter((c) => Math.abs(c.value) >= 1);
+/** The week: plan (target without balance) vs. eaten per day, the sums and the balance. */
+export function WeekView({ plans, week, day, today }: { plans: DayPlan[]; week: WeekSummary; day: Day; today: Day }) {
+  const current = plans.find((p) => p.day === day);
+  const finished = (p: DayPlan) => !p.untracked && p.logged && p.day < today;
   return (
-    <div className="stack" style={{ gap: 8 }}>
-      <div className="row">
-        <span className="subheadline secondary grow">This week</span>
-        <span className="footnote secondary">{week.daysRemaining === 1 ? "last day" : week.daysRemaining === 0 ? "done" : `${week.daysRemaining} days left`}</span>
+    <div className="stack" style={{ gap: 10 }}>
+      <span className="subheadline secondary">{day >= week.start && today <= addDays(week.start, 6) ? "This week" : "Week"}</span>
+      <div className="week-row caption secondary">
+        <span />
+        <span className="num">Plan</span>
+        <span className="num">Eaten</span>
+        <span className="num">±</span>
       </div>
-      <div className="row" style={{ alignItems: "baseline", gap: 4 }}>
-        <span className="title2 tabular">{Format.kcal(Math.abs(week.remaining))}</span>
-        <span className="subheadline" style={{ color: over ? "var(--orange)" : "var(--label-2)" }}>
-          {over ? "kcal over" : "kcal left"}
-        </span>
-        <span className="spacer" />
-        <span className="footnote secondary tabular">of {Format.kcal(week.total)}</span>
-      </div>
-      <ProgressBar progress={week.total > 0 ? week.eaten / week.total : 0} height={6} over={over} />
-      <div className="caption secondary tabular" style={{ lineHeight: "17px" }}>
-        Plan {Format.kcal(week.plan)} · Ø active {Format.kcal(week.params.average)}/day
-        {week.filledPlan > 0 && ` · filled ${Format.kcal(week.filled)} of ${Format.kcal(week.filledPlan)}`}
-        {changes.length > 0 && (
-          <>
-            <br />
-            {changes.map((c, i) => (
-              <span key={c.label}>
-                {i > 0 && " · "}
-                <span style={{ whiteSpace: "nowrap" }}>
-                  {c.label} {Format.signedKcal(c.value)}
-                </span>
+      <div className="stack" style={{ gap: 5 }}>
+        {plans.map((p) => (
+          <div key={p.day} className={`week-row footnote ${p.day === day ? "semibold" : ""} ${p.projected ? "tertiary" : ""}`}>
+            <span>{weekdayShort(p.day)}</span>
+            {p.untracked ? (
+              <span className="secondary" style={{ gridColumn: "2 / 5", textAlign: "right" }}>
+                Vacation
               </span>
-            ))}
-          </>
-        )}
+            ) : (
+              <>
+                <span className="num">{`${p.projected ? "~" : ""}${Format.kcal(p.targetBase)}`}</span>
+                <span className="num">{p.logged ? Format.kcal(p.eaten) : "–"}</span>
+                <span className="num" style={{ color: finished(p) && p.eaten > p.target ? "var(--orange)" : undefined }}>
+                  {finished(p) ? Format.signedKcal(p.eaten - p.targetBase) : ""}
+                </span>
+              </>
+            )}
+          </div>
+        ))}
+        <div className="week-row footnote semibold week-total">
+          <span>Week</span>
+          <span className="num">{Format.kcal(week.targetBase)}</span>
+          <span className="num">{Format.kcal(week.eaten)}</span>
+          <span className="num">{Math.abs(week.balance) >= 1 ? Format.signedKcal(-week.balance) : ""}</span>
+        </div>
       </div>
+      <span className="caption secondary">Plan = target without the weekly balance · ± = eaten − plan</span>
+      {current && Math.round(current.carry) !== 0 && (
+        <span className="footnote" style={{ color: current.carry > 0 ? "var(--accent)" : "var(--orange)" }}>
+          {current.carry > 0
+            ? `${Format.signedKcal(current.carry)} kcal from uneaten calories earlier this week`
+            : `${Format.signedKcal(current.carry)} kcal for food above plan earlier this week`}
+        </span>
+      )}
+      {current?.capped && (
+        <span className="caption secondary">
+          Balance limited to ±{Format.kcal(Math.abs(current.carry))} kcal per day (open: {Format.signedKcal(current.carryRaw)} kcal/day).
+        </span>
+      )}
     </div>
   );
 }

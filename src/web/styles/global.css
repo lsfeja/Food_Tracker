@@ -1686,3 +1686,22 @@ input[type="range"] {
     opacity: 0;
   }
 }
+
+/* Week view (Today): plan vs. eaten per day. */
+.week-row {
+  display: grid;
+  grid-template-columns: 3.4em 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-row .num {
+  text-align: right;
+}
+
+.week-total {
+  border-top: 0.5px solid var(--separator);
+  padding-top: 6px;
+}
+

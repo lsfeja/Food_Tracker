@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Barcode, Palmtree, Pencil, Plus, ScanText, Trash2, Utensils } from "lucide-react";
 import { useRef, useState } from "react";
 import type { EntryDTO } from "../../shared/api";
+import type { DayPlan } from "../../shared/energyBudget";
 import { budgetFor } from "../../shared/budget";
 import type { Day } from "../../shared/days";
 import * as Format from "../../shared/format";
@@ -14,7 +15,7 @@ import { SwipeRow } from "../components/SwipeRow";
 import { EmptyState, Row, Section, Spinner, ToggleRow } from "../components/ui";
 import { useAddFood } from "./add/AddFoodContext";
 import { useToday } from "../lib/useToday";
-import { ActivityRowContent, CalorieRing, EntryRowContent, MacroBar, WeekBudgetView } from "./DayWidgets";
+import { ActivityRowContent, CalorieRing, EntryRowContent, MacroBar, WeekView } from "./DayWidgets";
 import { EditEntrySheet } from "./EditEntrySheet";
 import { WeightSection } from "./WeightSection";
 
@@ -62,8 +63,9 @@ export function DayDashboard({ day }: { day: Day }) {
               <span className="divider" />
               <Stat title="Active" value={Format.kcal(budget.active)} />
               <span className="divider" />
-              <Stat title={budget.plan?.restDay ? "Target · rest day" : "Target"} value={Format.kcal(budget.calories.total)} />
+              <Stat title={budget.restDay ? "Target · rest day" : "Target"} value={Format.kcal(budget.calories.total)} />
             </div>
+            {budget.plan && <TargetBreakdown plan={budget.plan} />}
             <div className="stack" style={{ gap: 14, width: "100%" }}>
               <MacroBar title="Protein" value={budget.eaten.protein} target={budget.targets.protein} />
               <MacroBar title="Carbs" value={budget.eaten.carbs} target={budget.targets.carbs} />
@@ -73,10 +75,10 @@ export function DayDashboard({ day }: { day: Day }) {
         </Section>
         )}
 
-        {budget.week && (
+        {budget.week && budget.weekPlans.length > 0 && (
           <Section>
             <div style={{ padding: "12px 16px" }}>
-              <WeekBudgetView week={budget.week} />
+              <WeekView plans={budget.weekPlans} week={budget.week} day={day} today={today} />
             </div>
           </Section>
         )}
@@ -132,6 +134,19 @@ export function DayDashboard({ day }: { day: Day }) {
       <AddFoodButton day={day} />
       {editing && <EditEntrySheet entry={editing} onClose={() => setEditing(null)} />}
     </PullToRefresh>
+  );
+}
+
+/** Base · training (smoothed) · deficit · balance, under the day's target. */
+function TargetBreakdown({ plan }: { plan: DayPlan }) {
+  const parts = [`Base ${Format.kcal(plan.baseline)}`, `training +${Format.kcal(plan.smoothedActive)}`];
+  if (Math.round(plan.deficit) !== 0) parts.push(plan.deficit > 0 ? `deficit −${Format.kcal(plan.deficit)}` : `surplus +${Format.kcal(-plan.deficit)}`);
+  if (Math.round(plan.carry) !== 0) parts.push(`balance ${Format.signedKcal(plan.carry)}`);
+  return (
+    <span className="caption secondary tabular" style={{ textAlign: "center", marginTop: -12 }}>
+      {parts.join(" · ")}
+      {plan.capped && " (limited)"}
+    </span>
   );
 }
 

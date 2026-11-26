@@ -4,7 +4,7 @@ import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, XAxis, YAxis }
 import { addDays, weekStart } from "../../shared/days";
 import * as Format from "../../shared/format";
 import { dayStats, type DayStat, weekStats, type WeekStat } from "../../shared/historyStats";
-import { inputStart } from "../../shared/weeklyBudget";
+import { inputStart } from "../../shared/energyBudget";
 import { useSettings, useTotals } from "../api/nutrition";
 import { BackButton, NavBar } from "../components/NavBar";
 import { Row, Section, Segmented, Spinner } from "../components/ui";
@@ -51,9 +51,9 @@ export function HistoryPage() {
                 <Spinner />
               </div>
             ) : scope === "days" ? (
-              <DayChart stats={days.slice(-CHART_DAYS)} target={(weeks[weeks.length - 1]?.plan ?? 0) / 7} />
+              <DayChart stats={days.slice(-CHART_DAYS)} target={average(days.slice(-CHART_DAYS).filter((d) => !d.untracked).map((d) => d.budget))} />
             ) : (
-              <WeekChart stats={weeks} limit={weeks[weeks.length - 1]?.plan ?? 0} />
+              <WeekChart stats={weeks} limit={weeks[weeks.length - 1]?.weekTarget ?? 0} />
             )}
           </div>
         </Section>
@@ -71,7 +71,7 @@ export function HistoryPage() {
                       P {Format.grams(stat.eaten.protein)} · C {Format.grams(stat.eaten.carbs)} · F {Format.grams(stat.eaten.fat)}
                     </span>
                   </div>
-                  {stat.untracked ? <span className="footnote secondary">Not tracked</span> : <Totals eaten={stat.eaten.kcal} budget={stat.budget} />}
+                  {stat.untracked ? <span className="footnote secondary">Not tracked</span> : <Totals eaten={stat.eaten.kcal} budget={stat.budget} carry={stat.carry} />}
                 </Row>
               ))}
           </Section>
@@ -97,13 +97,19 @@ export function HistoryPage() {
   );
 }
 
-function Totals({ eaten, budget }: { eaten: number; budget: number }) {
+/** Eaten of the target; `carry` = part of the target from the weekly balance. */
+function Totals({ eaten, budget, carry = 0 }: { eaten: number; budget: number; carry?: number }) {
   return (
     <div className="stack tabular" style={{ alignItems: "flex-end", gap: 3, flex: "none" }}>
       <span className="semibold" style={{ color: eaten > budget ? "var(--orange)" : undefined }}>
         {Format.kcal(eaten)} kcal
       </span>
       <span className="caption secondary">of {Format.kcal(budget)}</span>
+      {Math.round(carry) !== 0 && (
+        <span className="caption" style={{ color: carry > 0 ? "var(--accent)" : "var(--orange)" }}>
+          {carry > 0 ? `incl. ${Format.signedKcal(carry)} uneaten` : `incl. ${Format.signedKcal(carry)} balance`}
+        </span>
+      )}
     </div>
   );
 }
