@@ -58,16 +58,12 @@ export function weightSeries(list: WeightDTO[]): WeightPoint[] {
   }));
 }
 
-/**
- * kg per week: least-squares slope of the weigh-ins in the 28 days up to `today`.
- * Null with fewer than 2 weigh-ins or when they span less than a week.
- */
-export function weeklyRate(list: WeightDTO[], today: Day): number | null {
-  const points = window(list, today, RATE_DAYS);
+/** Least-squares slope in kg per day (null with fewer than 2 points or all on one day). */
+export function slopePerDay(points: { day: Day; weightKg: number }[]): number | null {
   if (points.length < 2) return null;
-  const xs = points.map((w) => diffDays(points[0].day, w.day));
-  if (Math.max(...xs) < AVERAGE_DAYS - 1) return null;
-  const ys = points.map((w) => w.weightKg);
+  const sorted = [...points].sort((a, b) => (a.day < b.day ? -1 : 1));
+  const xs = sorted.map((w) => diffDays(sorted[0].day, w.day));
+  const ys = sorted.map((w) => w.weightKg);
   const mx = mean(xs)!;
   const my = mean(ys)!;
   let num = 0;
@@ -76,7 +72,19 @@ export function weeklyRate(list: WeightDTO[], today: Day): number | null {
     num += (xs[i] - mx) * (ys[i] - my);
     den += (xs[i] - mx) ** 2;
   }
-  return den > 0 ? (num / den) * 7 : null;
+  return den > 0 ? num / den : null;
+}
+
+/**
+ * kg per week: least-squares slope of the weigh-ins in the 28 days up to `today`.
+ * Null with fewer than 2 weigh-ins or when they span less than a week.
+ */
+export function weeklyRate(list: WeightDTO[], today: Day): number | null {
+  const points = sortWeights(window(list, today, RATE_DAYS));
+  if (points.length < 2) return null;
+  if (diffDays(points[0].day, points[points.length - 1].day) < AVERAGE_DAYS - 1) return null;
+  const slope = slopePerDay(points);
+  return slope === null ? null : slope * 7;
 }
 
 /** Change of the 7-day average from the first to the last point in the series. */
