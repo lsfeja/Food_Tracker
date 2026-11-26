@@ -40,7 +40,8 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
   Ausgleich stammt; jeder Tag lässt sich öffnen und nachtragen.
 - **Gewicht**: ein Wert pro Tag (optional Körperfett) direkt auf „Today“ eintragen; die
   Gewichtsseite zeigt Tageswerte, 7-Tage-Schnitt, kg pro Woche (Trend der letzten 4 Wochen) und
-  die Veränderung im gewählten Zeitraum. Das Budget bleibt davon unberührt.
+  die Veränderung im gewählten Zeitraum. Einzelne Wiegungen per Long-Press ausschließen (z. B.
+  nach Plasmaspende, Reise, Krankheit): sie bleiben sichtbar, zählen aber nicht im Trend.
 
 **Plan**
 - Trainingskalender als To-do-Liste pro Woche (Woche/Tag), heute hervorgehoben, Wochenleiste
@@ -247,7 +248,7 @@ Schnellzugriffe: `https://<domain>/add?mode=barcode` (Scanner) oder `…/add?mod
 | `workout_templates`, `week_templates` | Bibliothek und Wochenvorlagen |
 | `yearly_goals` | Jahresziele (km/Stunden) pro Sport-Filter |
 | `untracked_days` | Urlaubstage (nicht getrackt) |
-| `body_weights` | Gewicht pro Tag (kg), optional Körperfett (%) |
+| `body_weights` | Gewicht pro Tag (kg), optional Körperfett (%), „ausgeschlossen“ |
 | `backfill_state`, `rate_limits`, `oauth_states` | Historien-Import, API-Limits pro Anbieter, OAuth-State |
 
 ## Projektstruktur

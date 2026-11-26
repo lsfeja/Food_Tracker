@@ -4,7 +4,7 @@ import { addDays } from "./days";
 import { averageAt, averageChange, bodyFatAverageAt, latestOnOrBefore, validBodyFat, validWeight, weeklyRate, weightSeries } from "./weight";
 
 const D = "2026-03-01";
-const w = (offset: number, weightKg: number, bodyFatPct: number | null = null): WeightDTO => ({ day: addDays(D, offset), weightKg, bodyFatPct });
+const w = (offset: number, weightKg: number, bodyFatPct: number | null = null, excluded = false): WeightDTO => ({ day: addDays(D, offset), weightKg, bodyFatPct, excluded });
 
 describe("weight: averages", () => {
   it("averages the weigh-ins of the day and the 6 days before", () => {
@@ -48,6 +48,19 @@ describe("weight: weekly rate", () => {
     expect(weeklyRate([w(0, 75)], addDays(D, 3))).toBeNull();
     expect(weeklyRate([w(0, 75), w(3, 74)], addDays(D, 3))).toBeNull();
     expect(weeklyRate([w(0, 75), w(6, 74)], addDays(D, 6))).toBeCloseTo(-7 / 6);
+  });
+});
+
+describe("weight: excluded weigh-ins", () => {
+  it("are left out of averages, the weekly rate and the latest value, but stay in the series", () => {
+    const list = [w(0, 74), w(1, 80, null, true), w(2, 73), w(8, 72.5)];
+    expect(averageAt(list, addDays(D, 2))).toBeCloseTo(73.5);
+    expect(weeklyRate(list, addDays(D, 8))).toBeCloseTo(weeklyRate(list.filter((x) => !x.excluded), addDays(D, 8))!);
+    expect(latestOnOrBefore(list, addDays(D, 1))?.weightKg).toBe(74);
+    const series = weightSeries(list);
+    expect(series).toHaveLength(4);
+    expect(series[1]).toMatchObject({ excluded: true, weight: 80, average: 74 });
+    expect(averageChange(series)).toBeCloseTo(72.75 - 74);
   });
 });
 

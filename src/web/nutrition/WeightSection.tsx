@@ -27,6 +27,7 @@ export function WeightSection({ day }: { day: Day }) {
           <span className="row-value tabular">
             {Format.oneDecimal(entry.weightKg)} kg
             {entry.bodyFatPct !== null && ` · ${Format.oneDecimal(entry.bodyFatPct)} %`}
+            {entry.excluded && " · excluded"}
           </span>
         ) : (
           <span className="accent semibold">Log</span>

@@ -16,7 +16,7 @@ export function useSaveWeight() {
   const toast = useToast();
   return useMutation({
     mutationFn: async ({ entry, replaces }: { entry: WeightDTO; replaces?: Day }) => {
-      await api.put(`/weights/${entry.day}`, { weightKg: entry.weightKg, bodyFatPct: entry.bodyFatPct });
+      await api.put(`/weights/${entry.day}`, { weightKg: entry.weightKg, bodyFatPct: entry.bodyFatPct, excluded: entry.excluded });
       if (replaces && replaces !== entry.day) await api.delete(`/weights/${replaces}`);
     },
     onMutate: ({ entry, replaces }) => {
@@ -36,6 +36,21 @@ export function useDeleteWeight() {
     onMutate: (day) => {
       void client.cancelQueries({ queryKey: key });
       client.setQueryData<WeightDTO[]>(key, (list) => list?.filter((w) => w.day !== day));
+    },
+    onError: (error) => toast(errorMessage(error)),
+    onSettled: () => void client.invalidateQueries({ queryKey: key }),
+  });
+}
+
+/** Leaves a weigh-in out of trend and calibration (or takes it back in). */
+export function useSetWeightExcluded() {
+  const client = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({ day, excluded }: { day: Day; excluded: boolean }) => api.patch(`/weights/${day}`, { excluded }),
+    onMutate: ({ day, excluded }) => {
+      void client.cancelQueries({ queryKey: key });
+      client.setQueryData<WeightDTO[]>(key, (list) => list?.map((w) => (w.day === day ? { ...w, excluded } : w)));
     },
     onError: (error) => toast(errorMessage(error)),
     onSettled: () => void client.invalidateQueries({ queryKey: key }),

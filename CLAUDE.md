@@ -73,7 +73,7 @@ src/worker/
   routes/training.ts   sessions, move/duplicate/link, library, week templates
   routes/strava.ts     OAuth connect/callback, status, sync, backfill, disconnect, cron
   routes/stats.ts      stats snapshots, data range, yearly goals
-  routes/weight.ts     body weight per day (+ optional body fat): list, put, delete
+  routes/weight.ts     body weight per day (+ optional body fat): list, put, exclude, delete
   strava/client.ts     config, token exchange/refresh, authorized GET, models, kJ fallback
   strava/rateLimiter.ts D1 counter per provider (shared by all users), headers, 429
   strava/sync.ts       28-day window + catch-up (max 60 days), detail per new activity,
@@ -92,7 +92,7 @@ src/web/
   components/           NavBar/BackButton/BarButton, Sheet/ActionSheet, SwipeRow, TabBar,
                         PullToRefresh, PromptDialog, Toast, ui (Section, Row, inputs, …)
   lib/                  dates (Intl, UTC-safe day formatting), useToday, useOnline,
-                        usePersistentState, theme, useThemeColors, ocr (Tesseract)
+                        usePersistentState, useLongPress, theme, useThemeColors, ocr (Tesseract)
   nutrition/            NutritionHome/DayPage, DayDashboard, DayWidgets, EditEntrySheet,
                         HistoryPage, SettingsPage, ActivitySettingsSection,
                         WeightSection (Today row) / WeightSheet / WeightPage (/weight),
@@ -129,9 +129,10 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|
   today (`PUT /settings` with `day`), past days keep theirs, activities always recompute.
   Computed on the client from `totals` (with each day's activities) reaching back
   `inputStart(day)`. History compares eaten with Σ target_base of the logged days.
-- Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces), optional
-  body fat; trailing 7-day average and kg/week (least-squares over 28 days). It doesn't change
-  the budget.
+- Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces, keeps the
+  `excluded` flag), optional body fat; trailing 7-day average and kg/week (least-squares over
+  28 days). Excluded weigh-ins (long press, `PATCH /weights/:day`) stay visible but are left out
+  of averages, trend and calibration. Weight only changes the target via the calibration.
 - Vacation days (`untracked_days`, flag `untracked` in `totals`) have no target and are skipped
   by the weekly balance, calibration and nutrition stats; their activities still count (EWMA,
   sport stats).

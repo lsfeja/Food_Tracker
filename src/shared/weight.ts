@@ -16,6 +16,7 @@ export const RATE_DAYS = 28;
 export interface WeightPoint {
   day: Day;
   weight: number;
+  excluded: boolean;
   /** Trailing 7-day average of the weights. */
   average: number;
   bodyFat: number | null;
@@ -30,10 +31,10 @@ export const sortWeights = (list: WeightDTO[]) => [...list].sort((a, b) => (a.da
 
 const mean = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null);
 
-/** Weigh-ins from `day − 6` to `day`. */
+/** Weigh-ins from `day − 6` to `day`, without excluded ones. */
 const window = (list: WeightDTO[], day: Day, days = AVERAGE_DAYS) => {
   const first = addDays(day, -(days - 1));
-  return list.filter((w) => w.day >= first && w.day <= day);
+  return list.filter((w) => !w.excluded && w.day >= first && w.day <= day);
 };
 
 /** Trailing 7-day average weight at `day` (null without a weigh-in in that window). */
@@ -46,12 +47,13 @@ export function bodyFatAverageAt(list: WeightDTO[], day: Day): number | null {
   return mean(window(list, day).flatMap((w) => (w.bodyFatPct !== null ? [w.bodyFatPct] : [])));
 }
 
-/** One point per weigh-in, oldest first, with the trailing averages. */
+/** One point per weigh-in, oldest first, with the trailing averages (excluded ones left out). */
 export function weightSeries(list: WeightDTO[]): WeightPoint[] {
   const sorted = sortWeights(list);
   return sorted.map((w) => ({
     day: w.day,
     weight: w.weightKg,
+    excluded: Boolean(w.excluded),
     average: averageAt(sorted, w.day) ?? w.weightKg,
     bodyFat: w.bodyFatPct,
     bodyFatAverage: w.bodyFatPct !== null ? bodyFatAverageAt(sorted, w.day) : null,
@@ -87,15 +89,16 @@ export function weeklyRate(list: WeightDTO[], today: Day): number | null {
   return slope === null ? null : slope * 7;
 }
 
-/** Change of the 7-day average from the first to the last point in the series. */
+/** Change of the 7-day average from the first to the last (not excluded) point. */
 export function averageChange(points: WeightPoint[]): number | null {
-  if (points.length < 2) return null;
-  return points[points.length - 1].average - points[0].average;
+  const usable = points.filter((p) => !p.excluded);
+  if (usable.length < 2) return null;
+  return usable[usable.length - 1].average - usable[0].average;
 }
 
-/** Last weigh-in on or before `day`. */
+/** Last (not excluded) weigh-in on or before `day`. */
 export function latestOnOrBefore(list: WeightDTO[], day: Day): WeightDTO | null {
   let latest: WeightDTO | null = null;
-  for (const w of list) if (w.day <= day && (!latest || w.day > latest.day)) latest = w;
+  for (const w of list) if (!w.excluded && w.day <= day && (!latest || w.day > latest.day)) latest = w;
   return latest;
 }

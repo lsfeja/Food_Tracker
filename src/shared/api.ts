@@ -69,6 +69,8 @@ export interface WeightDTO {
   weightKg: number;
   /** Body fat in % (null = not measured). */
   bodyFatPct: number | null;
+  /** Left out of averages, trend and calibration (still shown). */
+  excluded: boolean;
 }
 
 export interface SessionDTO {

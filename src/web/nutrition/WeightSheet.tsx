@@ -34,7 +34,10 @@ export function WeightSheet({ day, onClose }: { day: Day; onClose: () => void })
 
   const submit = () => {
     if (!isValid) return;
-    save.mutate({ entry: { day: date, weightKg: weightValue!, bodyFatPct: bodyFat.trim() === "" ? null : bodyFatValue }, replaces: existing ? day : undefined });
+    save.mutate({
+      entry: { day: date, weightKg: weightValue!, bodyFatPct: bodyFat.trim() === "" ? null : bodyFatValue, excluded: existing?.excluded ?? false },
+      replaces: existing ? day : undefined,
+    });
     onClose();
   };
 
