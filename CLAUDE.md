@@ -74,6 +74,7 @@ src/worker/
   routes/strava.ts     OAuth connect/callback, status, sync, backfill, disconnect, cron
   routes/stats.ts      stats snapshots, data range, yearly goals
   routes/weight.ts     body weight per day (+ optional body fat): list, put, exclude, delete
+  routes/calibration.ts calibration log; accepting moves the baseline from that day
   strava/client.ts     config, token exchange/refresh, authorized GET, models, kJ fallback
   strava/rateLimiter.ts D1 counter per provider (shared by all users), headers, 429
   strava/sync.ts       28-day window + catch-up (max 60 days), detail per new activity,
@@ -101,6 +102,8 @@ src/web/
   plan/                 PlanPage (week strip, menu), WeekList (dnd-kit), SessionRow,
                         SessionDetailPage, AddSessionSheet, LinkSheets, LibraryPage,
                         WeekTemplatesPage, WeekTemplateSheets, editor/ (Content/Details)
+  calibration/          useCalibration (due, check, log), CalibrationViews (Today card,
+                        Settings section with log, weight page status)
   stats/                StatsPage, Endurance/Strength/Plan/NutritionSection, components
   styles/global.css     the whole design system (CSS variables, light/dark)
 ```
@@ -129,6 +132,12 @@ Routes: `/`, `/day/:day`, `/history`, `/settings`, `/weight`, `/add?mode=search|
   today (`PUT /settings` with `day`), past days keep theirs, activities always recompute.
   Computed on the client from `totals` (with each day's activities) reaching back
   `inputStart(day)`. History compares eaten with Σ target_base of the logged days.
+- Calibration (`shared/calibration.ts`): due `intervalDays` (14) after the last decision.
+  Window = the 14 days before today; needs 10 weigh-ins (not excluded) and 12 logged days
+  (vacation days don't count), else the reasons are shown (Settings, weight page). Expected kg =
+  Σ (eaten − (baseline + A)) / 7700, measured = least-squares weight slope × 14; adjustment =
+  −error per day × 0.5, max ±100. The client computes the proposal (Today card), the server logs
+  the decision (`calibrations`) and an accepted one changes the baseline from that day.
 - Body weight (`body_weights`, `shared/weight.ts`): one value per day (PUT replaces, keeps the
   `excluded` flag), optional body fat; trailing 7-day average and kg/week (least-squares over
   28 days). Excluded weigh-ins (long press, `PATCH /weights/:day`) stay visible but are left out
@@ -192,7 +201,7 @@ need defaults. Tests apply all migrations to a fresh local D1 (`test/worker/setu
 - Metric units only (g, kcal, km, kg); format with `src/shared/format.ts`, parse decimals
   with `parseDecimal` (accepts `,` and `.`).
 - Mutations invalidate the affected query keys (`day`, `totals`, `foods`, `plan`, `stats`,
-  `strava`, `library`, `weekTemplates`, `goals`, `weights`); use optimistic updates for taps that must
+  `strava`, `library`, `weekTemplates`, `goals`, `weights`, `calibrations`); use optimistic updates for taps that must
   feel instant (tick off, delete, drag & drop).
 - Keep components small; speed of logging beats feature count. Commit in small, working
   steps with clear messages.

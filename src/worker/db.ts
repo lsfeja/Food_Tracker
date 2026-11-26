@@ -1,10 +1,10 @@
 import type { ActivityDTO, EntryDTO, FoodDTO, SessionDTO } from "../shared/api";
 import type { DayTotals } from "../shared/budget";
-import type { Day } from "../shared/days";
+import { type Day, dayInTimeZone } from "../shared/days";
 import type { EntrySource, FoodSource } from "../shared/food";
 import { DEFAULT_CALIBRATION } from "../shared/calibration";
 import { SPORT_FACTOR_KEYS, type SportFactorKey } from "../shared/energyBudget";
-import type { BudgetHistoryEntry, UserSettings } from "../shared/settings";
+import { type BudgetHistoryEntry, historyEntry, type UserSettings } from "../shared/settings";
 import { parseDetails, sportInfo, type SessionStatus, type SportType } from "../shared/workout";
 
 export const newId = () => crypto.randomUUID();
@@ -76,6 +76,33 @@ export async function loadSettings(db: D1Database, userId: string): Promise<User
   const result = settingsFromRow(((settings.results ?? []) as Row[])[0] ?? null);
   result.budgetHistory = ((history.results ?? []) as Row[]).map(historyFromRow);
   return result;
+}
+
+/**
+ * After a settings change: if a budget value changed, it is valid from `day` (the user's
+ * today; default: today in their time zone). The values before stay for all earlier days.
+ */
+export async function recordBudgetChange(db: D1Database, userId: string, before: UserSettings, day: Day | null): Promise<UserSettings> {
+  const after = await loadSettings(db, userId);
+  const from = historyEntry(before, "1970-01-01");
+  const to = historyEntry(after, day ?? dayInTimeZone(Date.now(), after.timezone));
+  if (JSON.stringify({ ...from, day: "" }) !== JSON.stringify({ ...to, day: "" })) {
+    await db.batch([insertHistory(db, userId, from, true), insertHistory(db, userId, to, false)]);
+  }
+  return after;
+}
+
+/** Writes a history row; `ifMissing` only seeds the start (the values that applied so far). */
+function insertHistory(db: D1Database, userId: string, e: BudgetHistoryEntry, ifMissing: boolean) {
+  return db
+    .prepare(
+      `INSERT ${ifMissing ? "OR IGNORE " : ""}INTO budget_history (user_id, day, baseline_kcal, goal_kcal, alpha, active_enabled, carry_enabled, carry_cap_kcal, sport_factors, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ${ifMissing ? "" : `ON CONFLICT (user_id, day) DO UPDATE SET baseline_kcal = excluded.baseline_kcal, goal_kcal = excluded.goal_kcal, alpha = excluded.alpha,
+         active_enabled = excluded.active_enabled, carry_enabled = excluded.carry_enabled, carry_cap_kcal = excluded.carry_cap_kcal,
+         sport_factors = excluded.sport_factors, created_at = excluded.created_at`}`,
+    )
+    .bind(userId, e.day, e.baselineKcal, e.goalKcal, e.alpha, e.activeEnabled ? 1 : 0, e.carryEnabled ? 1 : 0, e.carryCapKcal, JSON.stringify(e.sportFactors), Date.now());
 }
 
 export function foodFromRow(r: Row): FoodDTO {

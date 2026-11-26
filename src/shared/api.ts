@@ -73,6 +73,20 @@ export interface WeightDTO {
   excluded: boolean;
 }
 
+/** A calibration decision (log). */
+export interface CalibrationDTO {
+  id: string;
+  day: Day;
+  decision: "accepted" | "declined";
+  oldBaseline: number;
+  /** Proposed baseline (applied when accepted). */
+  newBaseline: number;
+  adjustment: number;
+  reason: string;
+  details: Record<string, unknown>;
+  createdAt: number;
+}
+
 export interface SessionDTO {
   id: string;
   day: Day;

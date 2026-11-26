@@ -121,3 +121,27 @@ export function calibrationDue(lastDecision: Day | null, today: Day, intervalDay
 
 export const nextCalibration = (lastDecision: Day | null, today: Day, intervalDays: number): Day =>
   lastDecision === null ? today : addDays(lastDecision, intervalDays) > today ? addDays(lastDecision, intervalDays) : today;
+
+const signedKg = (kg: number) => `${kg > 0 ? "+" : kg < 0 ? "−" : "±"}${Math.abs(kg).toFixed(2)}`;
+
+/** One sentence for the proposal and the log. */
+export function describeCalibration(check: CalibrationCheck): string {
+  if (check.measuredKg === null) return check.reasons.join(" ");
+  const days = diffDays(check.from, addDays(check.to, 1));
+  const trend = `Weight trend ${signedKg(check.measuredKg)} kg in ${days} days, expected ${signedKg(check.expectedKg)} kg from food and training`;
+  if (check.adjustment < 0) return `${trend}: your real need seems lower than your base.`;
+  if (check.adjustment > 0) return `${trend}: your real need seems higher than your base.`;
+  return `${trend}: your base fits.`;
+}
+
+/** The numbers behind a proposal, for the log. */
+export const calibrationDetails = (check: CalibrationCheck) => ({
+  from: check.from,
+  to: check.to,
+  trackedDays: check.trackedDays,
+  weighIns: check.weighIns,
+  energyBalance: Math.round(check.energyBalance),
+  expectedKg: Number(check.expectedKg.toFixed(3)),
+  measuredKg: check.measuredKg === null ? null : Number(check.measuredKg.toFixed(3)),
+  errorPerDay: check.errorPerDay === null ? null : Math.round(check.errorPerDay),
+});

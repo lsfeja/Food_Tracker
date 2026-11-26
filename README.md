@@ -21,6 +21,11 @@ Ziel wie bei der iOS-Version: Eine Mahlzeit loggen oder ein Training abhaken dau
   weniger/mehr Gegessenes der Vortage wird auf die Resttage verteilt, max. ±300 kcal pro Tag;
   nichts wandert über Sonntag hinaus, Tage ohne Einträge und Urlaubstage zählen nicht.
   Änderungen an Grundbedarf, Defizit usw. gelten ab dem Tag der Änderung (Einstellungs-Historie).
+- **Kalibrierung über das Gewicht**: alle 14 Tage vergleicht die App den Gewichtstrend
+  (Regression, ohne ausgeschlossene Wiegungen) mit dem, was Essen und Training erwarten lassen,
+  und schlägt einen neuen Grundbedarf vor (50 % der Abweichung, max. ±100 kcal). Vorschlag auf
+  „Today“ übernehmen oder ablehnen; jede Entscheidung steht im Log (Einstellungen). Braucht
+  10 Wiegungen und 12 geloggte Tage in 14 – sonst zeigt die App, was fehlt.
 - Tagesübersicht: Ring mit verbleibenden kcal, Aufschlüsselung des Ziels, Woche als Plan/Gegessen
   pro Tag mit Ausgleich-Hinweis, Makro-Balken,
   Einträge (wischen zum Bearbeiten/Löschen), großer **+**-Button (gedrückt halten → Scan/Etikett).
@@ -240,6 +245,7 @@ Schnellzugriffe: `https://<domain>/add?mode=barcode` (Scanner) oder `…/add?mod
 | `users` | Nutzer pro Access-E-Mail |
 | `settings` | Ziele, Defizit, Glättung, Wochenausgleich, Sportfaktoren, Kalibrierung, Zeitzone |
 | `budget_history` | Budget-Einstellungen gültig ab einem Tag (vergangene Tage behalten ihre Werte) |
+| `calibrations` | Kalibrierungs-Log: Tag, Entscheidung, alter/neuer Grundbedarf, Begründung, Zahlen |
 | `foods` | eigene Lebensmittel (pro 100 g, Barcode, Nutzungsstatistik) |
 | `food_entries` | Einträge mit **absoluten** Nährwerten (Bearbeiten eines Lebensmittels ändert keine Historie); `source` manual/barcode/label/ai, `is_estimated` |
 | `connections` | OAuth-Verbindungen pro Anbieter (Tokens verschlüsselt) |

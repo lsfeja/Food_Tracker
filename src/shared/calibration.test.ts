@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calibrationCheck, calibrationDue, DEFAULT_CALIBRATION, type WeighIn } from "./calibration";
+import { calibrationCheck, calibrationDue, DEFAULT_CALIBRATION, describeCalibration, type WeighIn } from "./calibration";
 import { addDays, type Day } from "./days";
 import { type BudgetDayInput, type BudgetParams, DEFAULT_SPORT_FACTORS } from "./energyBudget";
 
@@ -34,6 +34,7 @@ describe("9.4 calibration", () => {
     expect(c.errorPerDay).toBeCloseTo(200);
     expect(c.adjustment).toBe(-100);
     expect(c.newBaseline).toBe(2300);
+    expect(describeCalibration(c)).toBe("Weight trend ±0.00 kg in 14 days, expected −0.36 kg from food and training: your real need seems lower than your base.");
   });
 
   it("losing faster than predicted raises the baseline, damped and capped", () => {

@@ -17,6 +17,7 @@ import { useToday } from "../lib/useToday";
 import { axisTick, longDate } from "../stats/chartUtils";
 import { ChipPicker, Legend, MetricGrid, MetricTile, StatsCard } from "../stats/components";
 import { WeightSheet } from "./WeightSheet";
+import { CalibrationStatusRow } from "../calibration/CalibrationViews";
 
 const RANGES = ["1m", "3m", "1y", "all"] as const;
 type Range = (typeof RANGES)[number];
@@ -191,6 +192,8 @@ export function WeightPage() {
                 )}
               </MetricGrid>
             </StatsCard>
+
+            <CalibrationStatusRow />
 
             <Section header="Weigh-ins" footer="Hold a weigh-in to leave it out of the trend and the calibration (e.g. after a plasma donation, travel or illness).">
               {visible.length === 0 && <div className="list-row secondary">No weigh-ins in this range.</div>}

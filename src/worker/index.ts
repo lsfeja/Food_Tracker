@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { authenticate, userIdFor } from "./auth";
 import type { AppContext, Env } from "./env";
+import { calibration } from "./routes/calibration";
 import { nutrition } from "./routes/nutrition";
 import { off } from "./routes/off";
 import { stats } from "./routes/stats";
@@ -29,6 +30,7 @@ app.route("/", training);
 app.route("/", strava);
 app.route("/", stats);
 app.route("/", weight);
+app.route("/", calibration);
 
 app.onError((error, c) => {
   if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);

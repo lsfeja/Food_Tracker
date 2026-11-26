@@ -18,6 +18,7 @@ import { useToday } from "../lib/useToday";
 import { ActivityRowContent, CalorieRing, EntryRowContent, MacroBar, WeekView } from "./DayWidgets";
 import { EditEntrySheet } from "./EditEntrySheet";
 import { WeightSection } from "./WeightSection";
+import { CalibrationCard } from "../calibration/CalibrationViews";
 
 /** Progress and entries for one day. Used for "Today" and for past days from History. */
 export function DayDashboard({ day }: { day: Day }) {
@@ -40,12 +41,14 @@ export function DayDashboard({ day }: { day: Day }) {
     await sync().catch(() => {});
     invalidateNutrition(client);
     void client.invalidateQueries({ queryKey: ["weights"] });
+    void client.invalidateQueries({ queryKey: ["calibrations"] });
     await query.refetch();
   };
 
   return (
     <PullToRefresh onRefresh={refresh}>
       <div className="page-content">
+        {day === today && <CalibrationCard />}
         {untracked ? (
           <Section>
             <div className="empty-state" style={{ padding: "28px 16px" }}>

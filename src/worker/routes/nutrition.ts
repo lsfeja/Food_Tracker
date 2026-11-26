@@ -1,13 +1,12 @@
 import { Hono } from "hono";
 import type { DayDTO } from "../../shared/api";
-import { addDays, dayInTimeZone, weekStart } from "../../shared/days";
+import { addDays, weekStart } from "../../shared/days";
 import { inputStart } from "../../shared/energyBudget";
 import { barcodeVariants } from "../../shared/food";
 import { forAmount } from "../../shared/nutrients";
-import { activityFromRow, entryFromRow, foodFromRow, loadSettings, newId, parseFactors, totalsBetween } from "../db";
+import { activityFromRow, entryFromRow, foodFromRow, loadSettings, newId, parseFactors, recordBudgetChange, totalsBetween } from "../db";
 import type { AppContext } from "../env";
 import { badRequest, isDay, jsonBody, notFound, num, optNum, requireDay, str } from "../http";
-import { type BudgetHistoryEntry, historyEntry } from "../../shared/settings";
 
 export const nutrition = new Hono<AppContext>();
 
@@ -56,27 +55,9 @@ nutrition.put("/settings", async (c) => {
     .run();
 
   // Budget values apply per day: a change is valid from the user's today, past days keep theirs.
-  const updated = await loadSettings(db, userId);
-  const before = historyEntry(current, "1970-01-01");
-  const after = historyEntry(updated, isDay(body.day) ? body.day : dayInTimeZone(Date.now(), updated.timezone));
-  if (JSON.stringify({ ...before, day: "" }) !== JSON.stringify({ ...after, day: "" })) {
-    await db.batch([insertHistory(db, userId, before, true), insertHistory(db, userId, after, false)]);
-  }
+  await recordBudgetChange(db, userId, current, isDay(body.day) ? body.day : null);
   return c.json(await loadSettings(db, userId));
 });
-
-/** Writes a history row; `ifMissing` only seeds the start (the values that applied so far). */
-function insertHistory(db: D1Database, userId: string, e: BudgetHistoryEntry, ifMissing: boolean) {
-  return db
-    .prepare(
-      `INSERT ${ifMissing ? "OR IGNORE " : ""}INTO budget_history (user_id, day, baseline_kcal, goal_kcal, alpha, active_enabled, carry_enabled, carry_cap_kcal, sport_factors, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ${ifMissing ? "" : `ON CONFLICT (user_id, day) DO UPDATE SET baseline_kcal = excluded.baseline_kcal, goal_kcal = excluded.goal_kcal, alpha = excluded.alpha,
-         active_enabled = excluded.active_enabled, carry_enabled = excluded.carry_enabled, carry_cap_kcal = excluded.carry_cap_kcal,
-         sport_factors = excluded.sport_factors, created_at = excluded.created_at`}`,
-    )
-    .bind(userId, e.day, e.baselineKcal, e.goalKcal, e.alpha, e.activeEnabled ? 1 : 0, e.carryEnabled ? 1 : 0, e.carryCapKcal, JSON.stringify(e.sportFactors), Date.now());
-}
 
 // MARK: Day & totals
 

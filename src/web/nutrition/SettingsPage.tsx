@@ -13,6 +13,7 @@ import { BackButton, NavBar } from "../components/NavBar";
 import { LabeledRow, NumberSetting, Section, Segmented, ToggleRow } from "../components/ui";
 import { setThemePreference, useThemePreference } from "../lib/theme";
 import { ActivitySettingsSection } from "./ActivitySettingsSection";
+import { CalibrationSection } from "../calibration/CalibrationViews";
 
 /** Targets, calorie target settings, activity integration. */
 export function SettingsPage() {
@@ -41,6 +42,8 @@ export function SettingsPage() {
         <CalorieTargetSection plan={plan} />
 
         <SportFactorsSection />
+
+        <CalibrationSection />
 
         <VacationSection />
 
