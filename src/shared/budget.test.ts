@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CALIBRATION } from "./calibration";
 import { budgetFor, calorieBudget, type DayTotals, totalsByDay } from "./budget";
 import { addDays } from "./days";
 import { dayStats, weekStats } from "./historyStats";
@@ -10,8 +11,9 @@ const totals = (kcal: number, active = 0, extra: Partial<DayTotals> = {}): DayTo
 function settings(o: { kcal?: number; active?: boolean; percent?: number; goal?: number } = {}): UserSettings {
   return {
     targets: { kcal: o.kcal ?? 2000, protein: 150, carbs: 200, fat: 70 },
-    budget: { activeCaloriesEnabled: o.active ?? true, activeCaloriesPercent: o.percent ?? 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: o.goal ?? 0 },
+    budget: { activeCaloriesEnabled: o.active ?? true, activeCaloriesPercent: o.percent ?? 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: o.goal ?? 0, alpha: 0.2, carryEnabled: true, carryCapKcal: 300, sportFactors: {}, calibration: DEFAULT_CALIBRATION },
     timezone: "UTC",
+    budgetHistory: [],
   };
 }
 

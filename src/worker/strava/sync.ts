@@ -50,11 +50,11 @@ export function upsertActivity(db: D1Database, userId: string, a: ImportedActivi
   return db
     .prepare(
       `INSERT INTO activities (id, user_id, source, external_id, name, type, start_at, day, duration_s, distance_m, elevation_m, is_indoor,
-         active_kcal, kcal_estimated, details_complete, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         has_power, active_kcal, kcal_estimated, details_complete, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, source, external_id) DO UPDATE SET name = excluded.name, type = excluded.type, start_at = excluded.start_at,
          day = excluded.day, duration_s = excluded.duration_s, distance_m = excluded.distance_m, elevation_m = excluded.elevation_m,
-         is_indoor = excluded.is_indoor, updated_at = excluded.updated_at${calorieUpdate}`,
+         is_indoor = excluded.is_indoor, has_power = excluded.has_power, updated_at = excluded.updated_at${calorieUpdate}`,
     )
     .bind(
       newId(),
@@ -69,6 +69,7 @@ export function upsertActivity(db: D1Database, userId: string, a: ImportedActivi
       a.distanceM,
       a.elevationM,
       a.isIndoor ? 1 : 0,
+      a.hasPower ? 1 : 0,
       a.activeKcal,
       a.kcalEstimated ? 1 : 0,
       a.detailsComplete ? 1 : 0,
@@ -86,6 +87,7 @@ function differs(row: Row | undefined, a: ImportedActivity): boolean {
     Number(row.duration_s) !== a.durationS ||
     Number(row.distance_m) !== a.distanceM ||
     Number(row.elevation_m) !== a.elevationM ||
+    Number(row.has_power ?? 0) !== (a.hasPower ? 1 : 0) ||
     Number(row.active_kcal) !== a.activeKcal ||
     Number(row.kcal_estimated) !== (a.kcalEstimated ? 1 : 0) ||
     Number(row.details_complete) !== (a.detailsComplete ? 1 : 0)

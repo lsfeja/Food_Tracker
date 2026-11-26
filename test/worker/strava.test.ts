@@ -78,7 +78,7 @@ describe("Strava OAuth and sync", () => {
           body:
             url.searchParams.get("page") === "1"
               ? [
-                  { id: 1, name: "Morning Ride", sport_type: "VirtualRide", start_date: iso(rideStart), start_date_local: iso(rideStart), moving_time: 3600, distance: 30000, kilojoules: 700, trainer: true },
+                  { id: 1, name: "Morning Ride", sport_type: "VirtualRide", start_date: iso(rideStart), start_date_local: iso(rideStart), moving_time: 3600, distance: 30000, kilojoules: 700, trainer: true, device_watts: true },
                   { id: 2, name: "Evening Run", sport_type: "Run", start_date: iso(runStart), start_date_local: iso(runStart), moving_time: 1800, distance: 6000 },
                 ]
               : [],
@@ -118,10 +118,10 @@ describe("Strava OAuth and sync", () => {
     expect(sync.data.strava).toMatchObject({ connected: true, athleteName: "Lucas F" });
     expect(detailCalls).toBe(2);
 
-    const activities = await env.DB.prepare("SELECT external_id, active_kcal, kcal_estimated, is_indoor, details_complete FROM activities ORDER BY external_id").all();
+    const activities = await env.DB.prepare("SELECT external_id, active_kcal, kcal_estimated, is_indoor, has_power, details_complete FROM activities ORDER BY external_id").all();
     expect(activities.results).toEqual([
-      { external_id: "1", active_kcal: 650, kcal_estimated: 0, is_indoor: 1, details_complete: 1 },
-      { external_id: "2", active_kcal: 0, kcal_estimated: 0, is_indoor: 0, details_complete: 1 },
+      { external_id: "1", active_kcal: 650, kcal_estimated: 0, is_indoor: 1, has_power: 1, details_complete: 1 },
+      { external_id: "2", active_kcal: 0, kcal_estimated: 0, is_indoor: 0, has_power: 0, details_complete: 1 },
     ]);
     const linked = await call<{ session: SessionDTO }>("GET", `/sessions/${session.data.id}`);
     expect(linked.data.session).toMatchObject({ linkedActivityKey: "strava:1", status: "done" });

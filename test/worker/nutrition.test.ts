@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DayDTO, EntryDTO, FoodDTO } from "../../src/shared/api";
+import { env } from "cloudflare:test";
+import type { DayTotals } from "../../src/shared/budget";
 import type { UserSettings } from "../../src/shared/settings";
 import { api } from "./helpers";
 
@@ -28,6 +30,60 @@ describe("settings", () => {
     expect(goal.data.budget.maxDailyDeficit).toBe(500);
     const surplus = await call<UserSettings>("PUT", "/settings", { budget: { goalKcal: 5000 } });
     expect(surplus.data.budget.goalKcal).toBe(750);
+  });
+});
+
+describe("budget settings per day", () => {
+  it("has the new defaults and clamps values", async () => {
+    const call = api("budget-defaults@example.com");
+    const initial = await call<UserSettings>("GET", "/settings");
+    expect(initial.data.budget).toMatchObject({ alpha: 0.2, carryEnabled: true, carryCapKcal: 300, sportFactors: {} });
+    expect(initial.data.budget.calibration).toEqual({ intervalDays: 14, maxStepKcal: 100, damping: 0.5, kcalPerKg: 7700 });
+    expect(initial.data.budgetHistory).toEqual([]);
+    const updated = await call<UserSettings>("PUT", "/settings", {
+      budget: { alpha: 5, carryCapKcal: -10, sportFactors: { weightTraining: 0.5, run: 9, bogus: 1 }, calibration: { intervalDays: 2, damping: 0.7 } },
+    });
+    expect(updated.data.budget).toMatchObject({ alpha: 0.9, carryCapKcal: 0, sportFactors: { weightTraining: 0.5 } });
+    expect(updated.data.budget.calibration).toMatchObject({ intervalDays: 7, damping: 0.7, maxStepKcal: 100 });
+  });
+
+  it("keeps the old values for past days and applies changes from the given day", async () => {
+    const call = api("budget-history@example.com");
+    await call("PUT", "/settings", { targets: { kcal: 2400 }, day: "2026-11-01" });
+    const first = await call<UserSettings>("PUT", "/settings", { budget: { goalKcal: -200 }, day: "2026-11-20" });
+    expect(first.data.budgetHistory.map((e) => [e.day, e.baselineKcal, e.goalKcal])).toEqual([
+      ["1970-01-01", 2200, 0],
+      ["2026-11-01", 2400, 0],
+      ["2026-11-20", 2400, -200],
+    ]);
+    // Same day again: replaces that day's row. Time zone only: no new row.
+    await call("PUT", "/settings", { targets: { kcal: 2300 }, day: "2026-11-20" });
+    const last = await call<UserSettings>("PUT", "/settings", { timezone: "Europe/Vienna", day: "2026-11-21" });
+    expect(last.data.budgetHistory).toHaveLength(3);
+    expect(last.data.budgetHistory[2]).toMatchObject({ day: "2026-11-20", baselineKcal: 2300, goalKcal: -200, alpha: 0.2, carryEnabled: true });
+    // Other users don't see it.
+    expect((await api("budget-other@example.com")<UserSettings>("GET", "/settings")).data.budgetHistory).toEqual([]);
+  });
+
+  it("returns the day's activities with moving time, sport and power meter in the totals", async () => {
+    const call = api("budget-totals@example.com");
+    await call("GET", "/settings");
+    const user = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind("budget-totals@example.com").first<{ id: string }>();
+    const insert = (id: string, type: string, kcal: number, moving: number, power: number) =>
+      env.DB.prepare(
+        `INSERT INTO activities (id, user_id, source, external_id, name, type, start_at, day, duration_s, active_kcal, has_power, updated_at)
+         VALUES (?, ?, 'strava', ?, 'A', ?, ?, '2026-11-22', ?, ?, ?, 0)`,
+      )
+        .bind(id, user!.id, id, type, Number(id.slice(1)), moving, kcal, power)
+        .run();
+    await insert("a1", "Ride", 900, 3600, 1);
+    await insert("a2", "WeightTraining", 300, 2700, 0);
+    const totals = await call<Record<string, DayTotals>>("GET", "/totals?from=2026-11-22&to=2026-11-23");
+    expect(totals.data["2026-11-22"].activeCalories).toBe(1200);
+    expect(totals.data["2026-11-22"].activities).toEqual([
+      { kcal: 900, movingS: 3600, sport: "Ride", hasPower: true },
+      { kcal: 300, movingS: 2700, sport: "WeightTraining", hasPower: false },
+    ]);
   });
 });
 

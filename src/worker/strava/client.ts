@@ -193,6 +193,8 @@ export interface SummaryActivity {
   total_elevation_gain?: number;
   trainer?: boolean;
   kilojoules?: number;
+  /** Watts from a power meter (not estimated). */
+  device_watts?: boolean;
 }
 
 export interface DetailedActivity {
@@ -211,6 +213,7 @@ export interface ImportedActivity {
   distanceM: number;
   elevationM: number;
   isIndoor: boolean;
+  hasPower: boolean;
   activeKcal: number;
   kcalEstimated: boolean;
   detailsComplete: boolean;
@@ -239,6 +242,7 @@ export function toImported(summary: SummaryActivity, calories: number | null, de
     distanceM: summary.distance ?? 0,
     elevationM: summary.total_elevation_gain ?? 0,
     isIndoor: Boolean(summary.trainer) || type === "VirtualRide" || type === "VirtualRun",
+    hasPower: Boolean(summary.device_watts),
     activeKcal: resolved.kcal,
     kcalEstimated: resolved.estimated,
     detailsComplete,

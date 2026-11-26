@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import type { DayDTO } from "../../shared/api";
-import { addDays, weekStart } from "../../shared/days";
+import { addDays, dayInTimeZone, weekStart } from "../../shared/days";
 import { inputStart } from "../../shared/weeklyBudget";
 import { barcodeVariants } from "../../shared/food";
 import { forAmount } from "../../shared/nutrients";
-import { activityFromRow, entryFromRow, foodFromRow, loadSettings, newId, totalsBetween } from "../db";
+import { activityFromRow, entryFromRow, foodFromRow, loadSettings, newId, parseFactors, totalsBetween } from "../db";
 import type { AppContext } from "../env";
-import { badRequest, jsonBody, notFound, num, optNum, requireDay, str } from "../http";
+import { badRequest, isDay, jsonBody, notFound, num, optNum, requireDay, str } from "../http";
+import { type BudgetHistoryEntry, historyEntry } from "../../shared/settings";
 
 export const nutrition = new Hono<AppContext>();
 
@@ -17,16 +18,21 @@ nutrition.get("/settings", async (c) => c.json(await loadSettings(c.env.DB, c.ge
 nutrition.put("/settings", async (c) => {
   const body = await jsonBody<Record<string, any>>(c.req.raw);
   const userId = c.get("userId");
-  const current = await loadSettings(c.env.DB, userId);
+  const db = c.env.DB;
+  const current = await loadSettings(db, userId);
   const t = { ...current.targets, ...(body.targets ?? {}) };
   const b = { ...current.budget, ...(body.budget ?? {}) };
+  const cal = { ...current.budget.calibration, ...(body.budget?.calibration ?? {}) };
   const timezone = typeof body.timezone === "string" && body.timezone ? body.timezone : current.timezone;
   const positive = (v: unknown, fallback: number) => (num(v, fallback) > 0 ? num(v, fallback) : fallback);
   const within = (v: unknown, fallback: number, min: number, max: number) => Math.min(Math.max(num(v, fallback), min), max);
-  await c.env.DB.prepare(
-    `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, active_enabled = ?, active_percent = ?,
-       rest_day_active_pct = ?, max_daily_deficit = ?, carry_over_pct = ?, goal_kcal = ?, timezone = ?, updated_at = ? WHERE user_id = ?`,
-  )
+  await db
+    .prepare(
+      `UPDATE settings SET target_kcal = ?, target_protein = ?, target_carbs = ?, target_fat = ?, active_enabled = ?, active_percent = ?,
+         rest_day_active_pct = ?, max_daily_deficit = ?, carry_over_pct = ?, goal_kcal = ?, alpha = ?, carry_enabled = ?, carry_cap_kcal = ?,
+         sport_factors = ?, calib_interval_days = ?, calib_max_step_kcal = ?, calib_damping = ?, kcal_per_kg = ?, timezone = ?, updated_at = ?
+       WHERE user_id = ?`,
+    )
     .bind(
       positive(t.kcal, current.targets.kcal),
       positive(t.protein, current.targets.protein),
@@ -37,15 +43,44 @@ nutrition.put("/settings", async (c) => {
       within(b.restDayActivePct, 75, 0, 100),
       within(b.maxDailyDeficit, 700, 0, 2000),
       within(b.carryOverPct, 70, 0, 100),
-      // The weekly budget limits the deficit further (floor); the surplus is capped at +750.
+      // Negative = deficit; a surplus is capped at +750.
       within(b.goalKcal, 0, -2000, 750),
+      within(b.alpha, 0.2, 0.05, 0.9),
+      b.carryEnabled ? 1 : 0,
+      within(b.carryCapKcal, 300, 0, 1500),
+      JSON.stringify(parseFactors(b.sportFactors)),
+      Math.round(within(cal.intervalDays, 14, 7, 60)),
+      within(cal.maxStepKcal, 100, 0, 500),
+      within(cal.damping, 0.5, 0, 1),
+      within(cal.kcalPerKg, 7700, 5000, 10000),
       timezone,
       Date.now(),
       userId,
     )
     .run();
-  return c.json(await loadSettings(c.env.DB, userId));
+
+  // Budget values apply per day: a change is valid from the user's today, past days keep theirs.
+  const updated = await loadSettings(db, userId);
+  const before = historyEntry(current, "1970-01-01");
+  const after = historyEntry(updated, isDay(body.day) ? body.day : dayInTimeZone(Date.now(), updated.timezone));
+  if (JSON.stringify({ ...before, day: "" }) !== JSON.stringify({ ...after, day: "" })) {
+    await db.batch([insertHistory(db, userId, before, true), insertHistory(db, userId, after, false)]);
+  }
+  return c.json(await loadSettings(db, userId));
 });
+
+/** Writes a history row; `ifMissing` only seeds the start (the values that applied so far). */
+function insertHistory(db: D1Database, userId: string, e: BudgetHistoryEntry, ifMissing: boolean) {
+  return db
+    .prepare(
+      `INSERT ${ifMissing ? "OR IGNORE " : ""}INTO budget_history (user_id, day, baseline_kcal, goal_kcal, alpha, active_enabled, carry_enabled, carry_cap_kcal, sport_factors, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ${ifMissing ? "" : `ON CONFLICT (user_id, day) DO UPDATE SET baseline_kcal = excluded.baseline_kcal, goal_kcal = excluded.goal_kcal, alpha = excluded.alpha,
+         active_enabled = excluded.active_enabled, carry_enabled = excluded.carry_enabled, carry_cap_kcal = excluded.carry_cap_kcal,
+         sport_factors = excluded.sport_factors, created_at = excluded.created_at`}`,
+    )
+    .bind(userId, e.day, e.baselineKcal, e.goalKcal, e.alpha, e.activeEnabled ? 1 : 0, e.carryEnabled ? 1 : 0, e.carryCapKcal, JSON.stringify(e.sportFactors), Date.now());
+}
 
 // MARK: Day & totals
 

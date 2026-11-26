@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CALIBRATION } from "../calibration";
 import type { DayTotals } from "../budget";
 import type { UserSettings } from "../settings";
 import type { ExerciseEntry } from "../workout";
@@ -243,8 +244,9 @@ describe("plan stats", () => {
 describe("nutrition stats", () => {
   const settings: UserSettings = {
     targets: { kcal: 2000, protein: 150, carbs: 200, fat: 70 },
-    budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: 0 },
+    budget: { activeCaloriesEnabled: true, activeCaloriesPercent: 100, restDayActivePct: 75, maxDailyDeficit: 700, carryOverPct: 70, goalKcal: 0, alpha: 0.2, carryEnabled: true, carryCapKcal: 300, sportFactors: {}, calibration: DEFAULT_CALIBRATION },
     timezone: "UTC",
+    budgetHistory: [],
   };
   const t = (kcal: number, protein = 0, active = 0): DayTotals => ({ eaten: { kcal, protein, carbs: 0, fat: 0 }, activeCalories: active });
 

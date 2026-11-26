@@ -1,10 +1,11 @@
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { DayDTO, EntryDTO, FoodDTO } from "../../shared/api";
 import type { DayTotals } from "../../shared/budget";
 import type { Day } from "../../shared/days";
 import type { EntrySource, FoodDraft } from "../../shared/food";
-import { defaultSettings, type UserSettings } from "../../shared/settings";
+import { localToday } from "../../shared/days";
+import { defaultSettings, historyEntry, type UserSettings } from "../../shared/settings";
 import { useToast } from "../components/Toast";
 import { api, errorMessage } from "./client";
 
@@ -31,9 +32,23 @@ export function useSettingsQuery() {
   return useQuery({ queryKey: keys.settings, queryFn: () => api.get<UserSettings>("/settings") });
 }
 
+/** Fills fields a cached copy from an older app version may lack. */
+function withDefaults(data: UserSettings | undefined): UserSettings {
+  const defaults = defaultSettings();
+  if (!data) return defaults;
+  return {
+    ...defaults,
+    ...data,
+    targets: { ...defaults.targets, ...data.targets },
+    budget: { ...defaults.budget, ...data.budget, calibration: { ...defaults.budget.calibration, ...data.budget?.calibration } },
+    budgetHistory: data.budgetHistory ?? [],
+  };
+}
+
 /** Settings with defaults while loading. */
 export function useSettings(): UserSettings {
-  return useSettingsQuery().data ?? defaultSettings();
+  const data = useSettingsQuery().data;
+  return useMemo(() => withDefaults(data), [data]);
 }
 
 export interface SettingsPatch {
@@ -51,19 +66,28 @@ export function useUpdateSettings() {
 
   return useCallback(
     (patch: SettingsPatch) => {
-      const current = client.getQueryData<UserSettings>(keys.settings) ?? defaultSettings();
+      const current = withDefaults(client.getQueryData<UserSettings>(keys.settings));
+      const day = localToday();
       const next: UserSettings = {
+        ...current,
         targets: { ...current.targets, ...patch.targets },
         budget: { ...current.budget, ...patch.budget },
         timezone: patch.timezone ?? current.timezone,
       };
+      // Like the server: budget values apply from today on, past days keep theirs.
+      const before = historyEntry(current, "1970-01-01");
+      const after = historyEntry(next, day);
+      if (JSON.stringify({ ...before, day: "" }) !== JSON.stringify({ ...after, day: "" })) {
+        const history = current.budgetHistory.length ? current.budgetHistory : [before];
+        next.budgetHistory = [...history.filter((e) => e.day !== day), after].sort((a, b) => (a.day < b.day ? -1 : 1));
+      }
       client.setQueryData(keys.settings, next);
       version.current += 1;
       const saved = version.current;
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(async () => {
         try {
-          const result = await api.put<UserSettings>("/settings", next);
+          const result = await api.put<UserSettings>("/settings", { targets: next.targets, budget: next.budget, timezone: next.timezone, day });
           if (saved === version.current) client.setQueryData(keys.settings, result);
         } catch (error) {
           toast(errorMessage(error));

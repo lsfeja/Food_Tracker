@@ -1,4 +1,5 @@
 import type { Day } from "./days";
+import type { ActivityInput } from "./energyBudget";
 import { addNutrients, type Nutrients, zeroNutrients } from "./nutrients";
 import { budgetConfig, type NutritionTargets, type UserSettings } from "./settings";
 import { type BudgetDayInput, type BudgetResult, type DayPlan, simulateBudget, type WeekSummary } from "./weeklyBudget";
@@ -6,8 +7,10 @@ import { type BudgetDayInput, type BudgetResult, type DayPlan, simulateBudget, t
 /** Raw totals of one day. */
 export interface DayTotals {
   eaten: Nutrients;
-  /** Active calories from activities, before the counted percentage. */
+  /** Strava calories of the day's activities (raw sum). */
   activeCalories: number;
+  /** The day's activities (cleaned per activity for the budget). */
+  activities?: ActivityInput[];
   /** A rest day is planned (Plan tab). */
   restDay?: boolean;
   /** Vacation: not tracked. */

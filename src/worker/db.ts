@@ -2,7 +2,9 @@ import type { ActivityDTO, EntryDTO, FoodDTO, SessionDTO } from "../shared/api";
 import type { DayTotals } from "../shared/budget";
 import type { Day } from "../shared/days";
 import type { EntrySource, FoodSource } from "../shared/food";
-import type { UserSettings } from "../shared/settings";
+import { DEFAULT_CALIBRATION } from "../shared/calibration";
+import { SPORT_FACTOR_KEYS, type SportFactorKey } from "../shared/energyBudget";
+import type { BudgetHistoryEntry, UserSettings } from "../shared/settings";
 import { parseDetails, sportInfo, type SessionStatus, type SportType } from "../shared/workout";
 
 export const newId = () => crypto.randomUUID();
@@ -27,13 +29,57 @@ export function settingsFromRow(row: Row | null): UserSettings {
       maxDailyDeficit: n(row?.max_daily_deficit ?? 700),
       carryOverPct: n(row?.carry_over_pct ?? 70),
       goalKcal: n(row?.goal_kcal ?? 0),
+      alpha: n(row?.alpha ?? 0.2),
+      carryEnabled: n(row?.carry_enabled ?? 1) === 1,
+      carryCapKcal: n(row?.carry_cap_kcal ?? 300),
+      sportFactors: parseFactors(row?.sport_factors),
+      calibration: {
+        intervalDays: n(row?.calib_interval_days ?? DEFAULT_CALIBRATION.intervalDays),
+        maxStepKcal: n(row?.calib_max_step_kcal ?? DEFAULT_CALIBRATION.maxStepKcal),
+        damping: n(row?.calib_damping ?? DEFAULT_CALIBRATION.damping),
+        kcalPerKg: n(row?.kcal_per_kg ?? DEFAULT_CALIBRATION.kcalPerKg),
+      },
     },
     timezone: String(row?.timezone ?? "Europe/Berlin"),
+    budgetHistory: [],
   };
 }
 
+/** Sport factor overrides from JSON (only known keys with valid values). */
+export function parseFactors(value: unknown): Partial<Record<SportFactorKey, number>> {
+  let raw: Record<string, unknown> = {};
+  try {
+    raw = typeof value === "string" ? (JSON.parse(value) as Record<string, unknown>) : value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  } catch {
+    raw = {};
+  }
+  const result: Partial<Record<SportFactorKey, number>> = {};
+  for (const key of SPORT_FACTOR_KEYS) {
+    const v = raw?.[key];
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 2) result[key] = v;
+  }
+  return result;
+}
+
+export const historyFromRow = (r: Row): BudgetHistoryEntry => ({
+  day: String(r.day),
+  baselineKcal: n(r.baseline_kcal),
+  goalKcal: n(r.goal_kcal),
+  alpha: n(r.alpha),
+  activeEnabled: n(r.active_enabled) === 1,
+  carryEnabled: n(r.carry_enabled) === 1,
+  carryCapKcal: n(r.carry_cap_kcal),
+  sportFactors: parseFactors(r.sport_factors),
+});
+
 export async function loadSettings(db: D1Database, userId: string): Promise<UserSettings> {
-  return settingsFromRow(await db.prepare("SELECT * FROM settings WHERE user_id = ?").bind(userId).first<Row>());
+  const [settings, history] = await db.batch([
+    db.prepare("SELECT * FROM settings WHERE user_id = ?").bind(userId),
+    db.prepare("SELECT * FROM budget_history WHERE user_id = ? ORDER BY day").bind(userId),
+  ]);
+  const result = settingsFromRow(((settings.results ?? []) as Row[])[0] ?? null);
+  result.budgetHistory = ((history.results ?? []) as Row[]).map(historyFromRow);
+  return result;
 }
 
 export function foodFromRow(r: Row): FoodDTO {
@@ -111,7 +157,7 @@ export function sessionFromRow(r: Row): SessionDTO {
   };
 }
 
-/** Per-day eaten nutrients, active calories, planned rest days and vacation days for [from, to). */
+/** Per-day eaten nutrients, activities (for the cleaned active kcal), planned rest days and vacation days for [from, to). */
 export async function totalsBetween(db: D1Database, userId: string, from: Day, to: Day): Promise<Record<Day, DayTotals>> {
   const [entries, activities, restDays, untracked] = await db.batch([
     db
@@ -119,7 +165,7 @@ export async function totalsBetween(db: D1Database, userId: string, from: Day, t
         "SELECT day, SUM(kcal) AS kcal, SUM(protein) AS protein, SUM(carbs) AS carbs, SUM(fat) AS fat FROM food_entries WHERE user_id = ? AND day >= ? AND day < ? GROUP BY day",
       )
       .bind(userId, from, to),
-    db.prepare("SELECT day, SUM(active_kcal) AS active FROM activities WHERE user_id = ? AND day >= ? AND day < ? GROUP BY day").bind(userId, from, to),
+    db.prepare("SELECT day, active_kcal, duration_s, type, has_power FROM activities WHERE user_id = ? AND day >= ? AND day < ? ORDER BY start_at").bind(userId, from, to),
     db.prepare("SELECT DISTINCT day FROM planned_sessions WHERE user_id = ? AND sport = 'rest' AND day >= ? AND day < ?").bind(userId, from, to),
     db.prepare("SELECT day FROM untracked_days WHERE user_id = ? AND day >= ? AND day < ?").bind(userId, from, to),
   ]);
@@ -129,8 +175,9 @@ export async function totalsBetween(db: D1Database, userId: string, from: Day, t
   }
   for (const r of (activities.results ?? []) as Row[]) {
     const day = String(r.day);
-    result[day] ??= { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 };
-    result[day].activeCalories = n(r.active);
+    const totals = (result[day] ??= { eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, activeCalories: 0 });
+    totals.activeCalories += n(r.active_kcal);
+    (totals.activities ??= []).push({ kcal: n(r.active_kcal), movingS: n(r.duration_s), sport: String(r.type ?? ""), hasPower: n(r.has_power) === 1 });
   }
   for (const r of (restDays.results ?? []) as Row[]) {
     const day = String(r.day);
